@@ -31,26 +31,20 @@ declare global {
   }
 }
 
-const statusFilter = (property: string, value: string) => ({
-  type: "group",
-  operator: "and",
-  filters: [
-    { type: "property", property, propertyType: "status", operator: "status_is", value: { type: "is_option", value } },
-  ],
-});
+/** 보기(view) 방식으로 읽기 — 무료 요금제의 조회 한도에 걸리지 않는다. 거르기·정렬은 화면에서 한다 */
+const viewInput = (viewUrl: string) => ({ mode: "view", view_url: viewUrl, page_size: 100 });
+
+/** 날짜 속성 기준 최신순 */
+const byDateDesc = (name: string) => (a: Row, b: Row) =>
+  isoOf(b, name).localeCompare(isoOf(a, name)) || text(b.createdTime).localeCompare(text(a.createdTime));
 
 const SECTIONS = [
   {
     key: "approvals",
     title: "✅ 결재 대기",
     empty: "결재 대기 중인 안건이 없어요.",
-    input: {
-      mode: "rows",
-      data_source_url: `collection://${NOTION.databases.approvals.dataSource}`,
-      filter: statusFilter("상태", "결재 대기"),
-      sort: [{ property: "날짜", direction: "descending" }],
-      limit: 10,
-    },
+    input: viewInput(NOTION.databases.approvals.view),
+    pick: (rows: Row[]) => rows.filter((r) => text(r["상태"]) === "결재 대기").sort(byDateDesc("날짜")),
     titleKey: "안건",
     meta: (r: Row) => [text(r["팀"]), dateOf(r, "날짜")],
   },
@@ -58,12 +52,8 @@ const SECTIONS = [
     key: "jobs",
     title: "🎯 최근 수집 공고",
     empty: "아직 수집된 공고가 없어요. 매일 아침 공고 수집이 끝나면 여기 쌓여요.",
-    input: {
-      mode: "rows",
-      data_source_url: `collection://${NOTION.databases.jobs.dataSource}`,
-      sort: [{ property: "수집일", direction: "descending" }],
-      limit: 12,
-    },
+    input: viewInput(NOTION.databases.jobs.view),
+    pick: (rows: Row[]) => [...rows].sort(byDateDesc("수집일")),
     titleKey: "공고명",
     meta: (r: Row) => [text(r["기업·기관"]), text(r["구분"]), deadline(dateOf(r, "마감일")), text(r["상태"])],
     link: "링크",
@@ -72,12 +62,8 @@ const SECTIONS = [
     key: "news",
     title: "📰 일일 소식",
     empty: "아직 정리된 소식이 없어요.",
-    input: {
-      mode: "rows",
-      data_source_url: `collection://${NOTION.databases.news.dataSource}`,
-      sort: [{ property: "날짜", direction: "descending" }],
-      limit: 10,
-    },
+    input: viewInput(NOTION.databases.news.view),
+    pick: (rows: Row[]) => [...rows].sort(byDateDesc("날짜")),
     titleKey: "제목",
     meta: (r: Row) => [text(r["분야"]), dateOf(r, "날짜")],
     link: "링크",
@@ -86,12 +72,8 @@ const SECTIONS = [
     key: "global",
     title: "🌏 국제동향",
     empty: "아직 정리된 국제동향이 없어요.",
-    input: {
-      mode: "rows",
-      data_source_url: `collection://${NOTION.databases.global.dataSource}`,
-      sort: [{ property: "날짜", direction: "descending" }],
-      limit: 8,
-    },
+    input: viewInput(NOTION.databases.global.view),
+    pick: (rows: Row[]) => [...rows].sort(byDateDesc("날짜")),
     titleKey: "제목",
     meta: (r: Row) => [text(r["구분"]), list(r["국가·지역"]), text(r["결재"])],
     link: "링크",
@@ -100,12 +82,8 @@ const SECTIONS = [
     key: "lab",
     title: "🔬 연구 소모임",
     empty: "아직 올라온 연구 소모임 결과가 없어요.",
-    input: {
-      mode: "rows",
-      data_source_url: `collection://${NOTION.databases.lab.dataSource}`,
-      sort: [{ property: "날짜", direction: "descending" }],
-      limit: 8,
-    },
+    input: viewInput(NOTION.databases.lab.view),
+    pick: (rows: Row[]) => [...rows].sort(byDateDesc("날짜")),
     titleKey: "제목",
     meta: (r: Row) => [text(r["구분"]), dateOf(r, "날짜"), text(r["결재"])],
     link: "원본 링크",
@@ -136,11 +114,15 @@ function list(v: unknown): string {
   return s;
 }
 
-/** 날짜는 "date:<이름>:start" 또는 "<이름>" 으로 올 수 있다 */
-function dateOf(r: Row, name: string): string {
+/** 날짜는 "date:<이름>:start" 또는 "<이름>" 으로 올 수 있다 → YYYY-MM-DD */
+function isoOf(r: Row, name: string): string {
   const raw = text(r[`date:${name}:start`]) || text(r[name]);
-  const m = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${Number(m[2])}/${Number(m[3])}` : raw;
+  return raw.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+}
+
+function dateOf(r: Row, name: string): string {
+  const iso = isoOf(r, name);
+  return iso ? `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}` : "";
 }
 
 function deadline(md: string): string {
@@ -169,7 +151,7 @@ function describeError(code: string): string {
     case "server_unavailable":
       return "Notion이 잠시 응답하지 않아요. 잠시 뒤 새로고침해 주세요.";
     case "tool_error":
-      return "Notion이 요청을 처리하지 못했어요.";
+      return "Notion이 요청을 처리하지 못했어요. 잠시 뒤 새로고침해 주세요.";
     default:
       return "Notion 결과를 불러오지 못했어요.";
   }
@@ -222,7 +204,7 @@ export default function NotionPanel({ compact = false }: { compact?: boolean }) 
               res = await run();
             }
             const payload = res.payload as { results?: Row[] } | undefined;
-            const rows = Array.isArray(payload?.results) ? payload!.results : [];
+            const rows = section.pick(Array.isArray(payload?.results) ? payload!.results : []);
             setState((prev) => ({ ...prev, [section.key]: { status: "ok", rows, at: res.cache?.storedAt ?? Date.now() } }));
           } catch (err) {
             const e = err as McpErr;

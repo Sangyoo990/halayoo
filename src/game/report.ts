@@ -103,11 +103,12 @@ function dateStr(r: Row, name: string) {
   return raw.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
 }
 
-async function rows(mcp: McpNs, dataSource: string, extra: Record<string, unknown> = {}): Promise<Row[]> {
+/** 보기(view) 방식으로 읽기 — 무료 요금제 조회 한도에 걸리지 않는다 */
+async function rows(mcp: McpNs, viewUrl: string): Promise<Row[]> {
   const res = await mcp.callTool(
     SERVER,
     "notion-query-data-sources",
-    { data: { mode: "rows", data_source_url: `collection://${dataSource}`, limit: 100, ...extra } },
+    { data: { mode: "view", view_url: viewUrl, page_size: 100 } },
     { cache: false },
   );
   const payload = res.payload as { results?: Row[] } | undefined;
@@ -134,17 +135,16 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
   const today = seoulToday();
 
   try {
-    // 1) 실제 결과 읽기
-    const [approvals, jobs] = await Promise.all([
-      rows(mcp, NOTION.databases.approvals.dataSource, {
-        filter: {
-          type: "group",
-          operator: "and",
-          filters: [{ type: "property", property: "상태", propertyType: "status", operator: "status_is", value: { type: "is_option", value: "결재 대기" } }],
-        },
-      }),
-      rows(mcp, NOTION.databases.jobs.dataSource, { sort: [{ property: "수집일", direction: "descending" }] }),
+    // 1) 실제 결과 읽기 — 읽기가 실패해도 브리핑은 만든다 (그 칸은 "확인 못 함")
+    const [approvalsRes, jobsRes] = await Promise.allSettled([
+      rows(mcp, NOTION.databases.approvals.view),
+      rows(mcp, NOTION.databases.jobs.view),
     ]);
+    const readFailed = { approvals: approvalsRes.status === "rejected", jobs: jobsRes.status === "rejected" };
+    const approvals = approvalsRes.status === "fulfilled" ? approvalsRes.value.filter((r) => str(r["상태"]) === "결재 대기") : [];
+    const jobs = (jobsRes.status === "fulfilled" ? jobsRes.value : []).sort((a, b) =>
+      dateStr(b, "수집일").localeCompare(dateStr(a, "수집일")),
+    );
     const todayJobs = jobs.filter((r) => dateStr(r, "수집일") === today);
     const in3 = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
     const urgent = jobs
@@ -160,15 +160,18 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
     const link = (title: string, url: string) => (/^https?:\/\//.test(url) ? `[${md(title)}](${url})` : md(title));
     const lines: string[] = [];
     lines.push("## ✅ 결재 대기");
-    lines.push(...(approvals.length ? approvals.map((r) => `- ${link(str(r["안건"]) || "(제목 없음)", str(r.url))} · ${md(str(r["팀"]))}`) : ["- 없음"]));
+    if (readFailed.approvals) lines.push("- ⚠️ 결재함을 읽지 못해 확인 못 함");
+    else lines.push(...(approvals.length ? approvals.map((r) => `- ${link(str(r["안건"]) || "(제목 없음)", str(r.url))} · ${md(str(r["팀"]))}`) : ["- 없음"]));
     lines.push("", "## 🎯 오늘 수집 공고");
-    lines.push(
+    if (readFailed.jobs) lines.push("- ⚠️ 공고 목록을 읽지 못해 확인 못 함");
+    else lines.push(
       ...(todayJobs.length
         ? todayJobs.slice(0, 15).map((r) => `- ${link(str(r["공고명"]) || "(제목 없음)", str(r["링크"]) || str(r.url))} — ${md(str(r["기업·기관"]))} (${md(str(r["구분"]))})`)
         : ["- 없음"]),
     );
     lines.push("", "## ⏰ 마감 임박 (3일 이내)");
-    lines.push(
+    if (readFailed.jobs) lines.push("- ⚠️ 확인 못 함");
+    else lines.push(
       ...(urgent.length
         ? urgent.slice(0, 10).map((r) => `- ${link(str(r["공고명"]) || "(제목 없음)", str(r["링크"]) || str(r.url))} — 마감 ${dateStr(r, "마감일")}`)
         : ["- 없음"]),
@@ -179,7 +182,7 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
     lines.push(`- 단계: ${md(report.phase)} · 완료 ${report.counts.done}팀 · 진행 ${report.counts.working}팀`);
     lines.push(...report.log.slice(-12).map((l) => `- ${l.time} ${md(l.text)}`));
 
-    const summary = `결재 대기 ${approvals.length}건 · 오늘 공고 ${todayJobs.length}건 · 마감 임박 ${urgent.length}건 · 오늘 일정 ${extras.todaySchedule.length}건`;
+    const summary = `${readFailed.approvals || readFailed.jobs ? "⚠️ 일부 확인 못 함 · " : ""}결재 대기 ${approvals.length}건 · 오늘 공고 ${todayJobs.length}건 · 마감 임박 ${urgent.length}건 · 오늘 일정 ${extras.todaySchedule.length}건`;
 
     // 3) 페이지 만들기
     const res = await mcp.callTool(
@@ -223,7 +226,7 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
             ? "Notion 쓰기 허용이 필요해요"
             : code === "server_unavailable" || code === "upstream_error"
               ? "응답이 없었어요. Notion에서 저장됐는지 먼저 확인해 주세요"
-              : "Notion 저장에 실패했어요";
+              : `Notion 저장에 실패했어요 (${code}${e?.message ? `: ${String(e.message).slice(0, 80)}` : ""})`;
     return {
       notion: { ok: false, status: "failed", detail },
       discord: { ok: false, status: "unconfigured", detail: "미사용" },

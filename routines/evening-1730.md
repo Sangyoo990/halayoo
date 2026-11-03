@@ -22,3 +22,9 @@
 🎯 오늘 수집 공고 N건
 📅 내일: 09:00 공고 결재 + (정기보고)"
 해당 항목이 없으면 그 줄은 "없음"으로. 확인하지 못한 건 지어내지 말고, Notion에 연결할 수 없으면 첫 줄에 "⚠️ Notion 연결이 안 돼서 확인하지 못했어요"라고 솔직하게 적어.
+
+## Notion 읽기 규칙 (중요)
+이 워크스페이스는 무료 요금제라 SQL·rows 조회 한도가 작아. **Notion을 읽을 때는 반드시 `notion-query-data-sources`의 view 모드만 써.**
+- 🎯 취업 공고: {"data": {"mode": "view", "view_url": "https://app.notion.com/p/3a3c9bb7e7da4b55a046089157b13ede?v=1516edd8dee3482fa6ccac970a1c0404", "page_size": 100}}
+- ✅ 대표 결재함: {"data": {"mode": "view", "view_url": "https://app.notion.com/p/7f66a0aa6e3a471bbba613db7357e14a?v=1a98bd1e8cbf45429f4cdd16cfe2a3bd", "page_size": 100}}
+거르기·정렬은 받아온 결과에서 직접 해. 페이지 만들기(notion-create-pages)는 평소대로 써.
