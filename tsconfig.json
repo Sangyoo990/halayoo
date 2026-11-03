@@ -12,5 +12,5 @@
     "isolatedModules": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "company.config.ts"]
+  "include": ["src", "company.config.ts", "notion.config.ts"]
 }

@@ -387,4 +387,4 @@ export const RECENT_OUTPUTS: { title: string; dept: string; status: string }[] =
 /**
  * 결과 보관함 링크 (Notion 등). 비워두면 화면에서 링크 버튼이 숨겨집니다.
  */
-export const STORAGE_LINK = "";
+export const STORAGE_LINK = "https://app.notion.com/p/40d01b1dbf7c81b9ba01e1b82903c783";
