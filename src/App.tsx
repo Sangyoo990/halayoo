@@ -27,6 +27,7 @@ import {
   WEEKLY_SCHEDULE,
 } from "../company.config";
 import SchedulePanel from "./SchedulePanel";
+import NotionPanel from "./NotionPanel";
 
 const STAFF_COUNT = STAFF.length;
 const TEAM_COUNT = DEPT_ROOMS.length;
@@ -429,6 +430,7 @@ function LiveView({
         <aside className="live-rail">
           <CeoConsole engine={engine} snap={snap} />
           <SchedulePanel snap={snap} />
+          <NotionPanel compact />
 
           <section className="win rail-card" id="ceo-approval">
             <div className="win-bar">
@@ -844,6 +846,8 @@ function DashboardView({
           </div>
         </div>
       </header>
+
+      <NotionPanel />
 
       <section className="summary-grid" aria-label="오늘 업무 요약">
         <article className="metric yellow">
