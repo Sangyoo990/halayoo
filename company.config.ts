@@ -371,11 +371,16 @@ export const STAFF_LIST: StaffEntry[] = [
  */
 export const PENDING_INTEGRATIONS: Record<string, string> = {};
 
-/** 대시보드 "integrations.link"에 보일 항목 (껍데기 버전이라 전부 미연동) */
-export const INTEGRATIONS: { name: string; status: string }[] = [
-  { name: "Notion 보고서 저장", status: "미연동" },
-  { name: "Google Drive 자료", status: "미연동" },
-  { name: "Discord 알림", status: "미연동" },
+/**
+ * 대시보드 "integrations.link"에 보일 연결 상태 (실제 상태에 맞춰 직접 고쳐주세요)
+ * tone: mint = 연결됨 / yellow = 설정 필요 / lav = 미연동
+ */
+export const INTEGRATIONS: { name: string; status: string; tone?: "mint" | "yellow" | "lav"; href?: string }[] = [
+  { name: "Notion 데이터베이스 5개", status: "생성 완료", tone: "mint" },
+  { name: "예약 작업 → Notion 저장", status: "커넥터 추가 필요", tone: "yellow" },
+  { name: "아이폰 푸시 (Claude 앱)", status: "예약 작업 ON", tone: "mint" },
+  { name: "애플 캘린더", status: "파일 업로드로 사용", tone: "lav" },
+  { name: "Google Drive 회의록", status: "미연동", tone: "lav" },
 ];
 
 /** 대시보드 "결과물 창고"에 보일 예시 항목 */

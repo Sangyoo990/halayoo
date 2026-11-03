@@ -54,7 +54,7 @@ const statusClass: Record<DeptStatus, string> = {
 
 /** 링크만 걸려 있는 항목 (서버 연동과 무관) */
 const integrations2Static = STORAGE_LINK
-  ? [{ name: "결과물 보관함", status: "링크 연결", tone: "mint", href: STORAGE_LINK }]
+  ? [{ name: "Notion 결과 보관함", status: "연결됨 · 열기", tone: "mint", href: STORAGE_LINK }]
   : [];
 
 function PixelEmployee({
@@ -812,10 +812,10 @@ function DashboardView({
   publishResult: PublishResult | null;
 }) {
   // 서버가 알려준 실제 설정 상태로 표시한다 (연결됐다고 거짓 보고하지 않는다)
-  // 껍데기 버전: 설정 파일의 항목을 그대로 "미연동"으로 보여준다 (연결됐다고 거짓 표시하지 않음)
+  // 설정 파일의 연결 상태를 그대로 보여준다 (연결 안 된 걸 연결됐다고 표시하지 않음)
   void integrations;
   void publishResult;
-  const liveRows = INTEGRATIONS.map((item) => ({ ...item, tone: "lav", href: "" }));
+  const liveRows = INTEGRATIONS.map((item) => ({ ...item, tone: item.tone ?? "lav", href: item.href ?? "" }));
   const rows = [...integrations2Static, ...liveRows];
   const dashItem = snap.approvalItem ?? TODAY_APPROVALS[0];
 
