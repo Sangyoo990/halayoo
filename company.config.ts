@@ -377,7 +377,7 @@ export const PENDING_INTEGRATIONS: Record<string, string> = {};
  */
 export const INTEGRATIONS: { name: string; status: string; tone?: "mint" | "yellow" | "lav"; href?: string }[] = [
   { name: "Notion 데이터베이스 5개", status: "생성 완료", tone: "mint" },
-  { name: "예약 작업 → Notion 저장", status: "커넥터 추가 필요", tone: "yellow" },
+  { name: "예약 작업 → Notion 저장", status: "연결됨", tone: "mint" },
   { name: "아이폰 푸시 (Claude 앱)", status: "예약 작업 ON", tone: "mint" },
   { name: "애플 캘린더", status: "파일 업로드로 사용", tone: "lav" },
   { name: "Google Drive 회의록", status: "미연동", tone: "lav" },
