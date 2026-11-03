@@ -57,14 +57,24 @@ const integrations2Static = STORAGE_LINK
   ? [{ name: "결과물 보관함", status: "링크 연결", tone: "mint", href: STORAGE_LINK }]
   : [];
 
-function PixelEmployee({ hair, shirt, accent }: { hair: string; shirt: string; accent: string }) {
+function PixelEmployee({
+  hair,
+  shirt,
+  accent,
+  female,
+}: {
+  hair: string;
+  shirt: string;
+  accent: string;
+  female?: boolean;
+}) {
   const style = {
     "--pixel-hair": hair,
     "--pixel-shirt": shirt,
     "--pixel-accent": accent,
   } as CSSProperties;
   return (
-    <span className="pixel-employee" style={style} aria-hidden="true">
+    <span className={`pixel-employee ${female ? "female" : ""}`} style={style} aria-hidden="true">
       <i className="pixel-shadow" />
       <i className="pixel-legs" />
       <i className="pixel-body" />
@@ -662,7 +672,7 @@ function ProfileModal({
         </div>
         <div className="win-body employee-profile">
           <div className="profile-top">
-            <PixelEmployee hair={agent.hair} shirt={agent.shirt} accent={agent.accent} />
+            <PixelEmployee hair={agent.hair} shirt={agent.shirt} accent={agent.accent} female={agent.gender === "f"} />
             <div>
               <span className="status-pill working">{agent.status}</span>
               <h2>
@@ -962,7 +972,7 @@ function DashboardView({
                   <button className="team-card" key={team.id} onClick={() => onSelect(team.lead.id)}>
                     <span className={`status-dot ${statusClass[team.status]}`} aria-hidden="true" />
                     <span className="mini-pixel">
-                      <PixelEmployee hair={team.lead.hair} shirt={team.lead.shirt} accent={team.lead.accent} />
+                      <PixelEmployee hair={team.lead.hair} shirt={team.lead.shirt} accent={team.lead.accent} female={team.lead.gender === "f"} />
                     </span>
                     <span className="team-copy">
                       <b>

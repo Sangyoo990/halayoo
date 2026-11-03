@@ -77,6 +77,7 @@ export type Agent = {
   thoughts: string[];
   /** 매일 맡는 업무 */
   task?: string;
+  gender?: "f" | "m";
 
   x: number;
   y: number;
@@ -276,6 +277,16 @@ export class Company {
     ceo.anim = "sit";
     ceo.facing = "down";
 
+    // 수행비서는 대표와 함께 처음부터 대표실 자리에 있다
+    const sec = this.agentById.get(SECRETARY_SEED.id);
+    if (sec) {
+      sec.x = SECRETARY_SEAT.x;
+      sec.y = SECRETARY_SEAT.y;
+      sec.status = "대기";
+      sec.anim = "sit";
+      sec.facing = "up";
+    }
+
     for (const room of DEPT_ROOMS) {
       this.deptStatus[room.id] = BLOCKED_DEPTS.has(room.id) ? "연동 대기" : "대기";
     }
@@ -386,7 +397,7 @@ export class Company {
   private *dayScript(): Generator<number | (() => boolean), void, void> {
     // ① 출근
     this.phaseIndex = PHASE.arrive;
-    const workers = this.agents.filter((a) => a.rank !== "ceo");
+    const workers = this.agents.filter((a) => a.rank !== "ceo" && a.id !== SECRETARY_SEED.id);
     this.pushLog("🚪", `${HH}:00 출근 시작! 팀원 ${workers.length}명 입장합니다.`, "yellow");
     this.lock(workers);
     for (const agent of workers) {
@@ -1442,7 +1453,8 @@ export class Company {
 
     if (agent.status === "출근 전") return;
 
-    if (roll < 0.5 || this.focusMode) {
+    // 업무 시작 전에는 자리에서 생각만 한다
+    if (roll < 0.5 || this.focusMode || (!this.running && !this.dayComplete)) {
       // 집중 모드에서는 자리에서 생각만 한다 — 커피·잡담 금지
       this.say(agent, rand(agent.thoughts), 3.4, "think");
       return;

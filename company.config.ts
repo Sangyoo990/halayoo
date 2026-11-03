@@ -243,14 +243,15 @@ export const TODAY_APPROVALS: ApprovalItem[] = [
 ];
 
 /**
- * 대표 수행비서 — 대표방 바로 앞 자리.
+ * 대표 수행비서 — 대표실 안 자리 (대표와 함께 항상 자리에 있음).
  * 내 일정 리마인드 + 결재 등 대표가 챙길 일 알림.
  */
 export const SECRETARY = {
   name: "유지민",
+  gender: "f" as "f" | "m",
   role: "대표 수행비서 · 일정·결재 리마인드",
   task: "대표님 일정 리마인드 · 결재 챙기기",
-  colors: ["#2a2f45", "#f4f7fb", "#1e3a6e"] as [string, string, string],
+  colors: ["#3a2a2a", "#f4f7fb", "#1e3a6e"] as [string, string, string],
   thoughts: ["다음 일정 30분 전에 말씀드려야지.", "결재 밀린 거 없나 확인.", "이번 주 일정 겹치는 거 체크."],
   duties: [
     "대표님 전체 일정 관리 · 리마인드 (당일 아침 + 일정 30분 전)",
@@ -277,6 +278,8 @@ export type StaffEntry = {
   rank: "lead" | "member";
   name: string;
   role: string;
+  /** 성별 — "f"(여자) 이면 긴 머리 캐릭터, 없으면 남자 캐릭터 */
+  gender?: "f" | "m";
   /** 매일 맡는 업무 — 일하는 동안 머리 위·프로필에 표시 */
   task?: string;
   colors: [string, string, string];
@@ -290,7 +293,7 @@ export const STAFF_LIST: StaffEntry[] = [
     task: "취업 전략 총괄 · 다국적 기업 검토",
     colors: ["#1f2a3d", "#1e3a6e", "#f3e7bd"],
     thoughts: ["오늘 지원할 곳 우선순위부터 정하자.", "이 외국계, 대표님 경험이 강점이 될 것 같은데?", "마감 임박한 공고부터 챙깁니다."] },
-  { dept: "career", rank: "member", name: "최아현", role: "공고 수집 · 공기업",
+  { dept: "career", rank: "member", name: "최아현", gender: "f", role: "공고 수집 · 공기업",
     task: "공기업 일반사무직 신입 공고 수집",
     colors: ["#6b3d34", "#f4f7fb", "#3b5b92"],
     thoughts: ["NCS 일정이랑 같이 정리해둘게요.", "가산점 항목 따로 표시!"] },
@@ -298,11 +301,11 @@ export const STAFF_LIST: StaffEntry[] = [
     task: "대기업·중견 인사·총무·대관·대외협력 공고 수집",
     colors: ["#2c2638", "#dbe3f0", "#1e3a6e"],
     thoughts: ["인턴 공고랑 재무 직무는 빼고요.", "중견기업 기준 다시 확인."] },
-  { dept: "career", rank: "member", name: "김시은", role: "경험 정리 · 스펙 점검",
+  { dept: "career", rank: "member", name: "김시은", gender: "f", role: "경험 정리 · 스펙 점검",
     task: "경험 정리 검토 · 수정 제안 · 가산점 점검",
     colors: ["#33304a", "#cfe9de", "#1e3a6e"],
     thoughts: ["이 경험은 숫자로 보여주면 좋겠어요.", "보충하면 좋을 자격증 체크 중."] },
-  { dept: "career", rank: "member", name: "오나경", role: "합격 자소서 분석",
+  { dept: "career", rank: "member", name: "오나경", gender: "f", role: "합격 자소서 분석",
     task: "합격 자소서 최신본 수집·분석",
     colors: ["#7a453c", "#b8c7e3", "#f3e7bd"],
     thoughts: ["올해 문항 경향이 조금 바뀌었네요.", "자주 나오는 소재 정리해둘게요."] },
@@ -316,7 +319,7 @@ export const STAFF_LIST: StaffEntry[] = [
     task: "팀별 업무 흐름 점검 · 개선 제안",
     colors: ["#3c3a4f", "#3b5b92", "#cfe9de"],
     thoughts: ["대표님이 결정할 것만 추릴게요.", "취업준비팀 흐름이 제일 중요해요.", "막힌 팀부터 먼저 보고."] },
-  { dept: "support", rank: "member", name: "지수정", role: "스포츠 소식 담당",
+  { dept: "support", rank: "member", name: "지수정", gender: "f", role: "스포츠 소식 담당",
     task: "축구(국대·EPL 빅6·레알) / 야구(KBO·롯데) 소식 요약",
     colors: ["#4a3a2a", "#dbe3f0", "#1e3a6e"],
     thoughts: ["롯데 어제 경기 결과부터 정리!", "레알 경기 일정 체크.", "EPL 빅6 이적 소식 있나?"] },
@@ -324,7 +327,7 @@ export const STAFF_LIST: StaffEntry[] = [
     task: "국내·해외 일일 헤드라인 종합",
     colors: ["#5d3a2c", "#b8c7e3", "#1e3a6e"],
     thoughts: ["국내 3개, 해외 3개로 압축.", "제목만 봐도 알 수 있게 요약하자."] },
-  { dept: "support", rank: "member", name: "박담비", role: "자료·검색 지원",
+  { dept: "support", rank: "member", name: "박담비", gender: "f", role: "자료·검색 지원",
     task: "대표님 요청 대기 · 자료 준비 · 기타 지원",
     colors: ["#274a44", "#f4f7fb", "#3b5b92"],
     thoughts: ["요청 오면 바로 찾을 수 있게 대기 중.", "자주 찾는 자료는 미리 모아둘게요."] },
@@ -338,25 +341,25 @@ export const STAFF_LIST: StaffEntry[] = [
     task: onDay({ 1: `국가별 기사 후보 5가지 정리 (${REGION})` }, `${REGION} 기사 후보 모으기`),
     colors: ["#4a3a2a", "#cfe9de", "#3b5b92"],
     thoughts: ["월요일 10시까지 후보 5개!", "원문 출처부터 확인할게요."] },
-  { dept: "global", rank: "member", name: "최현지", role: "주간 국제 뉴스 담당",
+  { dept: "global", rank: "member", name: "최현지", gender: "f", role: "주간 국제 뉴스 담당",
     task: onDay({ 5: "대표 확인용 주간 국제 뉴스 정리 (17:00)" }, "이번 주 국제 이슈 모으기"),
     colors: ["#7a453c", "#b8c7e3", "#1e3a6e"],
     thoughts: ["보고서용 아니고 대표님 확인용이니까 가볍게.", "분야 상관없이 이슈된 것 위주로."] },
 
   // ④ 연구소모임팀 (팀장 1 + 팀원 3)
-  { dept: "lab", rank: "lead", name: "윤서연", role: "연구소모임 팀장",
+  { dept: "lab", rank: "lead", name: "윤서연", gender: "f", role: "연구소모임 팀장",
     task: "‘연구 소모임’ 팔로우 · 회의록 검토 · 발전 방향 제안",
     colors: ["#463227", "#1e3a6e", "#cfe9de"],
     thoughts: ["회의록 오면 발전 방향부터 정리하자.", "개선할 점, 추가할 점 나눠서 건의."] },
-  { dept: "lab", rank: "member", name: "김주희", role: "자료조사·디벨롭",
+  { dept: "lab", rank: "member", name: "김주희", gender: "f", role: "자료조사·디벨롭",
     task: onDay({ 3: "주간 자료조사 결과 보고 준비 (14:00)" }, "회의·연구 관련 자료조사 · 디벨롭"),
     colors: ["#2c2638", "#dbe3f0", "#1e3a6e"],
     thoughts: ["수요일 2시 보고에 맞춰 정리.", "참고 자료 출처 표기 꼼꼼히."] },
-  { dept: "lab", rank: "member", name: "최민주", role: "방문 기관·인터뷰 섭외 리서치",
+  { dept: "lab", rank: "member", name: "최민주", gender: "f", role: "방문 기관·인터뷰 섭외 리서치",
     task: "방문 기관 · 인터뷰 대상자 추천",
     colors: ["#5a3450", "#f4f7fb", "#3b5b92"],
     thoughts: ["연구 주제랑 딱 맞는 기관 찾는 중.", "인터뷰 후보 3명 추려볼게요."] },
-  { dept: "lab", rank: "member", name: "서혜원", role: "문서 작성",
+  { dept: "lab", rank: "member", name: "서혜원", gender: "f", role: "문서 작성",
     task: "보고서·발표문 사전 작업 · 지시 시 작성",
     colors: ["#7a453c", "#b8c7e3", "#f3e7bd"],
     thoughts: ["목차부터 잡아두면 작성이 빨라요.", "발표문은 3분 분량 기준으로."] },

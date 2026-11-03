@@ -585,3 +585,32 @@
 .sch-msg { margin: 0; font-size: 12px; font-weight: 700; color: var(--pink-deep); }
 .sch-tip { margin: 0; font-size: 10px; color: var(--ink-faint); }
 .approval-more { font-size: 12px; color: var(--ink-soft); }
+
+/* ── 여자 캐릭터: 긴 머리 ─────────────────────────── */
+.g-f .p-hair::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -2.5px;
+  top: 1px;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--ink);
+  border-radius: 5px 5px 3px 3px;
+  background: var(--hair);
+}
+.g-f.f-up .p-hair::after { height: 19px; }
+.pixel-employee.female { isolation: isolate; }
+/* 프로필 그림: 얼굴(z 3) 뒤, 몸통 위(z 2)에 긴 머리 */
+.pixel-employee.female::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 6px;
+  left: 4px;
+  width: 35px;
+  height: 34px;
+  border: 2px solid var(--ink);
+  border-radius: 9px 9px 4px 4px;
+  background: var(--pixel-hair);
+}

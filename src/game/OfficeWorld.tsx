@@ -213,7 +213,7 @@ export default function OfficeWorld({ engine, snap, selectedId, follow, onSelect
           el.style.zIndex = String(200 + Math.round(agent.y));
 
           const cls =
-            `ag f-${agent.facing} a-${agent.anim} r-${agent.rank}` +
+            `ag f-${agent.facing} a-${agent.anim} r-${agent.rank} g-${agent.gender ?? "m"}` +
             (agent.id === picked ? " selected" : "") +
             (agent.status === "출근 전" ? " offstage" : "");
           if (el.className !== cls) el.className = cls;

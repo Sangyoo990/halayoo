@@ -13,6 +13,7 @@ export type StaffSeed = {
   callsign?: string;
   /** 이 직원이 매일 맡는 업무 (없으면 팀 업무) */
   task?: string;
+  gender?: "f" | "m";
   role: string;
   deptId: string;
   rank: "lead" | "member" | "ceo";
@@ -76,6 +77,7 @@ export const SECRETARY_SEED: StaffSeed = {
   name: SECRETARY.name,
   role: SECRETARY.role,
   task: SECRETARY.task,
+  gender: SECRETARY.gender,
   deptId: SECRETARY_DEPT,
   rank: "member",
   hair: SECRETARY.colors[0],
@@ -86,7 +88,7 @@ export const SECRETARY_SEED: StaffSeed = {
 };
 
 export const STAFF: StaffSeed[] = [
-  ...STAFF_LIST.map((s) => ({ ...make(s.dept, s.rank, s.name, s.role, s.colors, s.thoughts, s.callsign), task: s.task })),
+  ...STAFF_LIST.map((s) => ({ ...make(s.dept, s.rank, s.name, s.role, s.colors, s.thoughts, s.callsign), task: s.task, gender: s.gender })),
   SECRETARY_SEED,
 ];
 
