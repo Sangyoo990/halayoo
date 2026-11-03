@@ -70,27 +70,169 @@ export function buildReport(snap: Snapshot): DayReport {
   };
 }
 
-/** 외부 연동이 없는 껍데기 버전 — 실제로 보내지 않고 "미연동"으로 응답한다 */
-export async function publish(report: DayReport): Promise<PublishResult> {
+// ── Notion 발행 (claude.ai에서 열었을 때, 보는 사람의 Notion 연결로) ──────────
+
+type McpNs = {
+  callTool: (server: string, tool: string, input?: unknown, options?: { cache?: false }) => Promise<{ payload?: unknown }>;
+};
+type McpErr = { code?: string; message?: string };
+type Row = Record<string, unknown>;
+
+const SERVER = "Notion";
+
+async function getMcp(): Promise<McpNs | null> {
+  const use = (window as unknown as { claude?: { use: (n: string) => Promise<unknown> } }).claude?.use;
+  if (!use) return null;
   try {
-    localStorage.setItem("my-office:last-report", JSON.stringify(report));
+    return ((await use("mcp")) as McpNs) ?? null;
   } catch {
-    // 저장이 막혀 있어도 화면은 정상 동작
+    return null;
   }
-  return {
-    notion: { ok: false, status: "unconfigured", detail: "미연동" },
-    discord: { ok: false, status: "unconfigured", detail: "미연동" },
-    publishedAt: new Date().toISOString(),
-  };
 }
 
-/** 연동 상태 — 껍데기 버전은 전부 미설정 */
+function seoulToday() {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(new Date());
+}
+
+function str(v: unknown) {
+  return typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
+}
+
+function dateStr(r: Row, name: string) {
+  const raw = str(r[`date:${name}:start`]) || str(r[name]);
+  return raw.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+}
+
+async function rows(mcp: McpNs, dataSource: string, extra: Record<string, unknown> = {}): Promise<Row[]> {
+  const res = await mcp.callTool(
+    SERVER,
+    "notion-query-data-sources",
+    { data: { mode: "rows", data_source_url: `collection://${dataSource}`, limit: 100, ...extra } },
+    { cache: false },
+  );
+  const payload = res.payload as { results?: Row[] } | undefined;
+  return Array.isArray(payload?.results) ? payload!.results : [];
+}
+
+export type PublishExtras = {
+  /** 오늘 내 일정 (오피스 일정 창) */
+  todaySchedule: string[];
+};
+
+/** 실제 Notion 상황 + 내 일정 + 오피스 진행 기록으로 브리핑 페이지를 만든다 */
+export async function publish(report: DayReport, extras: PublishExtras = { todaySchedule: [] }): Promise<PublishResult> {
+  const now = new Date().toISOString();
+  const mcp = await getMcp();
+  if (!mcp) {
+    return {
+      notion: { ok: false, status: "unconfigured", detail: "claude.ai에서 열었을 때만 발행돼요" },
+      discord: { ok: false, status: "unconfigured", detail: "미사용" },
+      publishedAt: now,
+    };
+  }
+  const { NOTION } = await import("../../notion.config");
+  const today = seoulToday();
+
+  try {
+    // 1) 실제 결과 읽기
+    const [approvals, jobs] = await Promise.all([
+      rows(mcp, NOTION.databases.approvals.dataSource, {
+        filter: {
+          type: "group",
+          operator: "and",
+          filters: [{ type: "property", property: "상태", propertyType: "status", operator: "status_is", value: { type: "is_option", value: "결재 대기" } }],
+        },
+      }),
+      rows(mcp, NOTION.databases.jobs.dataSource, { sort: [{ property: "수집일", direction: "descending" }] }),
+    ]);
+    const todayJobs = jobs.filter((r) => dateStr(r, "수집일") === today);
+    const in3 = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
+    const urgent = jobs
+      .filter((r) => {
+        const d = dateStr(r, "마감일");
+        const st = str(r["상태"]);
+        return d && d >= today && d <= in3 && st !== "지원 완료" && st !== "제외";
+      })
+      .sort((a, b) => dateStr(a, "마감일").localeCompare(dateStr(b, "마감일")));
+
+    // 2) 본문 (Markdown)
+    const md = (s: string) => s.replace(/[\\*_`#[\]<>|]/g, " ").trim();
+    const link = (title: string, url: string) => (/^https?:\/\//.test(url) ? `[${md(title)}](${url})` : md(title));
+    const lines: string[] = [];
+    lines.push("## ✅ 결재 대기");
+    lines.push(...(approvals.length ? approvals.map((r) => `- ${link(str(r["안건"]) || "(제목 없음)", str(r.url))} · ${md(str(r["팀"]))}`) : ["- 없음"]));
+    lines.push("", "## 🎯 오늘 수집 공고");
+    lines.push(
+      ...(todayJobs.length
+        ? todayJobs.slice(0, 15).map((r) => `- ${link(str(r["공고명"]) || "(제목 없음)", str(r["링크"]) || str(r.url))} — ${md(str(r["기업·기관"]))} (${md(str(r["구분"]))})`)
+        : ["- 없음"]),
+    );
+    lines.push("", "## ⏰ 마감 임박 (3일 이내)");
+    lines.push(
+      ...(urgent.length
+        ? urgent.slice(0, 10).map((r) => `- ${link(str(r["공고명"]) || "(제목 없음)", str(r["링크"]) || str(r.url))} — 마감 ${dateStr(r, "마감일")}`)
+        : ["- 없음"]),
+    );
+    lines.push("", "## 📅 오늘 일정");
+    lines.push(...(extras.todaySchedule.length ? extras.todaySchedule.map((t) => `- ${md(t)}`) : ["- 등록된 일정 없음"]));
+    lines.push("", "## 🏢 오피스 진행 기록 (시뮬레이션)");
+    lines.push(`- 단계: ${md(report.phase)} · 완료 ${report.counts.done}팀 · 진행 ${report.counts.working}팀`);
+    lines.push(...report.log.slice(-12).map((l) => `- ${l.time} ${md(l.text)}`));
+
+    const summary = `결재 대기 ${approvals.length}건 · 오늘 공고 ${todayJobs.length}건 · 마감 임박 ${urgent.length}건 · 오늘 일정 ${extras.todaySchedule.length}건`;
+
+    // 3) 페이지 만들기
+    const res = await mcp.callTool(
+      SERVER,
+      "notion-create-pages",
+      {
+        parent: { type: "data_source_id", data_source_id: NOTION.databases.briefing.dataSource },
+        pages: [
+          {
+            properties: {
+              "브리핑명": `${today} 대표 브리핑`,
+              "date:날짜:start": today,
+              "date:날짜:is_datetime": 0,
+              "결재 대기": approvals.length,
+              "오늘 수집 공고": todayJobs.length,
+              "마감 임박 공고": urgent.length,
+              "오늘 일정": extras.todaySchedule.length,
+              "요약": summary,
+            },
+            content: lines.join("\n"),
+          },
+        ],
+      },
+      { cache: false },
+    );
+    const created = (res.payload as { pages?: { url?: string }[] } | undefined)?.pages?.[0];
+    return {
+      notion: { ok: true, status: "sent", detail: summary, url: created?.url },
+      discord: { ok: false, status: "unconfigured", detail: "미사용" },
+      publishedAt: now,
+    };
+  } catch (err) {
+    const e = err as McpErr;
+    const code = e?.code ?? "upstream_error";
+    const detail =
+      code === "server_not_connected"
+        ? "Notion이 연결돼 있지 않아요 (claude.ai 설정 → 커넥터)"
+        : code === "needs_reauth"
+          ? "Notion을 다시 연결해 주세요"
+          : code === "not_in_manifest" || code === "approval_required" || code === "consent_required"
+            ? "Notion 쓰기 허용이 필요해요"
+            : code === "server_unavailable" || code === "upstream_error"
+              ? "응답이 없었어요. Notion에서 저장됐는지 먼저 확인해 주세요"
+              : "Notion 저장에 실패했어요";
+    return {
+      notion: { ok: false, status: "failed", detail },
+      discord: { ok: false, status: "unconfigured", detail: "미사용" },
+      publishedAt: now,
+    };
+  }
+}
+
+/** 연동 상태 — 대시보드 표시는 company.config.ts 의 INTEGRATIONS 를 쓴다 */
 export async function fetchIntegrations(): Promise<IntegrationStatus> {
-  return {
-    notion: { configured: false, label: "Notion 저장" },
-    discord: { configured: false, label: "Discord 전송" },
-    instagram: { configured: false, label: "Instagram 지표", need: "연동 대기" },
-    gmail: { configured: false, label: "Gmail 읽기", need: "연동 대기" },
-    finance: { configured: false, label: "재무 파일", need: "자료 대기" },
-  };
+  return {};
 }

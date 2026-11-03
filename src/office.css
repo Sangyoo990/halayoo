@@ -641,3 +641,4 @@
 .nt-error p { margin: 0; }
 .nt-error.small { padding: 8px 10px; }
 .nt-tip { margin: 0; font-size: 10px; color: var(--ink-faint); }
+.brief-link { text-decoration: none; }

@@ -28,6 +28,7 @@ import {
 } from "../company.config";
 import SchedulePanel from "./SchedulePanel";
 import NotionPanel from "./NotionPanel";
+import { formatItem, todaySchedule } from "./game/schedule";
 
 const STAFF_COUNT = STAFF.length;
 const TEAM_COUNT = DEPT_ROOMS.length;
@@ -105,7 +106,7 @@ export default function Home() {
     result: null,
     error: "",
   });
-  const publishedRef = useRef(false);
+  const [lastBriefUrl, setLastBriefUrl] = useState("");
 
   useEffect(() => {
     let raf = 0;
@@ -145,41 +146,22 @@ export default function Home() {
       .catch(() => setIntegrations(null));
   }, []);
 
-  const sendReport = useCallback(
-    async (auto: boolean) => {
-      setPublishState((state) => ({ ...state, busy: true, error: "" }));
-      try {
-        const result = await publish(buildReport(engine.snapshot()));
-        setPublishState({ busy: false, result, error: "" });
-
-        const parts: string[] = [];
-        parts.push(result.notion.ok ? "Notion 저장 완료" : `Notion ${result.notion.detail ?? "실패"}`);
-        parts.push(result.discord.ok ? "Discord 전송 완료" : `Discord ${result.discord.detail ?? "실패"}`);
-        engine.pushLog(
-          result.notion.ok && result.discord.ok ? "📤" : "⚠️",
-          `완료 보고 발행 — ${parts.join(" / ")}`,
-          result.notion.ok && result.discord.ok ? "mint" : "lav",
-        );
-        engine.pushChat("staff", SEC_NAME, `보고서 발행 결과입니다.\n· ${parts.join("\n· ")}`);
-        if (!auto) showToast(result.notion.ok || result.discord.ok ? "보고서를 발행했어요" : "발행 실패 — 연동 설정 필요");
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        setPublishState({ busy: false, result: null, error: message });
-        engine.pushLog("⚠️", `완료 보고 발행 실패 — ${message}`, "lav");
-        if (!auto) showToast("발행 실패 — 연동 설정을 확인해주세요");
-      }
-    },
-    [engine, showToast],
-  );
-
-  // 하루가 끝나면 자동으로 한 번 발행한다
-  useEffect(() => {
-    if (snap.dayComplete && !publishedRef.current) {
-      publishedRef.current = true;
-      void sendReport(true);
+  const sendReport = useCallback(async () => {
+    setPublishState((state) => ({ ...state, busy: true, error: "" }));
+    const result = await publish(buildReport(engine.snapshot()), {
+      todaySchedule: todaySchedule().map((item) => formatItem(item)),
+    });
+    setPublishState({ busy: false, result, error: result.notion.ok ? "" : (result.notion.detail ?? "") });
+    if (result.notion.ok) {
+      engine.pushLog("📤", `대표 브리핑을 Notion에 저장했어요 — ${result.notion.detail ?? ""}`, "mint");
+      engine.pushChat("staff", SEC_NAME, `브리핑을 Notion "📋 일일 브리핑"에 저장했어요.\n${result.notion.detail ?? ""}`);
+      if (result.notion.url && /^https?:\/\//.test(result.notion.url)) setLastBriefUrl(result.notion.url);
+      showToast("Notion에 브리핑을 저장했어요");
+    } else {
+      engine.pushLog("⚠️", `보고 발행 실패 — ${result.notion.detail ?? ""}`, "lav");
+      showToast(`발행 실패 — ${result.notion.detail ?? "Notion 확인 필요"}`);
     }
-    if (!snap.dayComplete && snap.running) publishedRef.current = false;
-  }, [snap.dayComplete, snap.running, sendReport]);
+  }, [engine, showToast]);
 
   const askAgent = useCallback(
     (agent: Agent) => {
@@ -271,7 +253,8 @@ export default function Home() {
             onStart={start}
             onApprove={approve}
             onDuty={onDuty}
-            onPublish={() => void sendReport(false)}
+            onPublish={() => void sendReport()}
+            lastBriefUrl={lastBriefUrl}
             publishBusy={publishState.busy}
             publishResult={publishState.result}
           />
@@ -331,6 +314,7 @@ function LiveView({
   onPublish,
   publishBusy,
   publishResult,
+  lastBriefUrl,
 }: {
   engine: Company;
   snap: Snapshot;
@@ -344,6 +328,7 @@ function LiveView({
   onPublish: () => void;
   publishBusy: boolean;
   publishResult: PublishResult | null;
+  lastBriefUrl: string;
 }) {
   const progress = Math.round((snap.phaseIndex / (PHASES.length - 1)) * 100);
   const current = snap.approvalItem ?? TODAY_APPROVALS[0];
@@ -404,10 +389,15 @@ function LiveView({
           className={`btn btn-ghost publish-btn ${publishResult?.notion.ok || publishResult?.discord.ok ? "sent" : ""}`}
           onClick={onPublish}
           disabled={publishBusy}
-          title="완료 보고를 Notion에 저장하고 같은 내용을 Discord로 보냅니다"
+          title="결재 대기·오늘 공고·마감 임박·오늘 일정을 모아 Notion '📋 일일 브리핑'에 저장합니다"
         >
           {publishBusy ? "발행 중…" : "📤 보고 발행"}
         </button>
+        {lastBriefUrl ? (
+          <a className="btn btn-ghost brief-link" href={lastBriefUrl} target="_blank" rel="noreferrer">
+            📋 방금 브리핑 보기 ↗
+          </a>
+        ) : null}
         <div className="live-progress">
           <span>
             {snap.phase} · {progress}%
