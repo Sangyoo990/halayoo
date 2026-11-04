@@ -59,6 +59,16 @@ const SECTIONS = [
     link: "링크",
   },
   {
+    key: "library",
+    title: "🎓 취업 자료실",
+    empty: "아직 쌓인 자료가 없어요. 매일 아침 유튜브·면접 자료가 여기 쌓여요.",
+    input: viewInput(NOTION.databases.library.view),
+    pick: (rows: Row[]) => [...rows].sort(byDateDesc("날짜")),
+    titleKey: "제목",
+    meta: (r: Row) => [text(r["구분"]), text(r["출처"]), dateOf(r, "날짜")],
+    link: "링크",
+  },
+  {
     key: "news",
     title: "📰 일일 소식",
     empty: "아직 정리된 소식이 없어요.",

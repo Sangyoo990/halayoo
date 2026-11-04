@@ -14,6 +14,8 @@ export const NOTION = {
     news: { url: "https://app.notion.com/p/408fedb992f347b2b87a20e4bc4c30bb", dataSource: "ddc6ba59-8fcb-49fc-b40a-c573c21f56f7", view: "https://app.notion.com/p/408fedb992f347b2b87a20e4bc4c30bb?v=51aa05b72e3d4d53999896ab7c5969b8" },
     /** 🌏 국제동향 — 월 10:00 / 금 17:00 */
     global: { url: "https://app.notion.com/p/f5e5e258fc9048f2af054524e25dd865", dataSource: "dd6d3ed4-3356-40a3-97b3-ae93d781af86", view: "https://app.notion.com/p/f5e5e258fc9048f2af054524e25dd865?v=4b4f81d5064142128b002214b06a1f2e" },
+    /** 🎓 취업 자료실 — 유튜브·면접(매일), 합격 자소서·다국적 기업(목) */
+    library: { url: "https://app.notion.com/p/25f85db7abb94c349c8be734771228db", dataSource: "265b9019-900a-4403-b746-613bdb840756", view: "https://app.notion.com/p/25f85db7abb94c349c8be734771228db?v=638cc4cea704410985c9dd0be96bbc2b" },
     /** 📋 일일 브리핑 — 오피스 "📤 보고 발행" 버튼 */
     briefing: { url: "https://app.notion.com/p/6b767fd1ad1f4d3cb2c01fbd2b6d946c", dataSource: "af0ee035-61ef-4e24-bfae-976e15fb0b2e" },
     /** 🔬 연구 소모임 — 회의록 · 수 14:00 */
