@@ -4,6 +4,7 @@
 
 ## 0) 자료 읽기
 - Google Drive 회의록: 문서 ID 1ZN9k2WilODlPt9A2wd6cnGvqpKmr0LIf3jq7MkuRvI0 ("회의록_연구소모임 4조"). 전체를 읽고, 가장 최근 회의 날짜와 결정 사항·다음 할 일을 파악해.
+- Google Drive PDF **"261102 1차자료조사통합요약본.pdf"** (파일 ID 1aidyFfw3-e8YJPGTITa5WbHgP3GBRkUk): 팀의 1차 자료조사 통합본이야. 전부 읽고, 이미 조사된 내용은 2) 자료조사에서 반복하지 말고 **빈 곳·보강할 곳**을 골라. 3-1) 보고서 초안 메모의 근거로도 써 (이 자료에 나온 출처는 "1차 자료조사 요약본 기준"이라고 표시). Drive 도구로 내용을 못 읽으면 다운로드해서 `pdftotext -layout`로 읽어.
 - 같은 Drive에 "연구소모임" 이름이 들어간 폴더나 문서가 있으면 함께 참고해 (대표가 Claude 프로젝트 자료를 옮겨둘 수 있음).
 - 🔬 연구 소모임 Notion 데이터베이스를 view 모드로 읽어서 지난 보고 내용을 확인하고 같은 내용을 반복하지 마:
   {"data": {"mode": "view", "view_url": "https://app.notion.com/p/e6ea457920344d41a05d90c3055e0d4b?v=1266a1e7f34743beaaf84e48e682977d", "page_size": 100}}
