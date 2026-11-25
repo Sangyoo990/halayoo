@@ -148,6 +148,7 @@ button:focus-visible, a:focus-visible { outline-color: rgba(192, 57, 43, .45); }
     linear-gradient(to top, #fff 0 3px, #d33a2c 3px);
   clip-path: polygon(0 100%, 100% 100%, 86% 36%, 100% 22%, 92% 0, 78% 8%, 60% 6%);
   pointer-events: none;
+  z-index: 2;
 }
 .f-up .p-hair::before { bottom: 6px; }
 
