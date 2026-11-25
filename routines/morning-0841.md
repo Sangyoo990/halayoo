@@ -32,9 +32,10 @@
 ### 출처 (우선순위)
 **원칙: 자동 접속을 막는 사이트(403, "보안 확인/안전한 접속 확인" 화면, Cloudflare 등)는 우회하지 말고 그날은 건너뛰어.** 브라우저인 척 헤더를 바꾸거나 다른 주소로 돌아가는 식의 우회 금지. 자소설닷컴·잡플래닛·캐치는 막혀 있으니 직접 접속하지 마.
 1. **링커리어** https://linkareer.com/list/recruit — 공고 목록·상세.
-2. **공공기관 채용정보 API (공공데이터포털, 잡알리오와 같은 데이터)** — 공공기관·목표 기관 13곳은 **이걸 먼저** 써. Bash에서 환경 변수 `DATA_GO_KR_KEY`가 있으면:
-   `curl -s -m 30 "https://apis.data.go.kr/1051000/recruitment/list?serviceKey=$(python3 -c 'import os,urllib.parse;print(urllib.parse.quote(os.environ["DATA_GO_KR_KEY"]))')&numOfRows=100&pageNo=1&resultType=json&ongoingYn=Y"` (필요하면 pageNo 2, 3…). 응답에서 기관명·공고명·채용 구분(신입/경력)·고용 형태(정규직 여부)·근무지·접수 마감일·상세 링크 필드를 읽어 조건에 맞는 것만 등록. 출처 = "잡알리오". 키 값은 어디에도 적거나 출력하지 마. 변수가 없거나 오류(키 오류 코드 등)가 나면 마지막 줄에 그 사실을 적고 아래 잡알리오 사이트로.
-   - **잡알리오 사이트** https://job.alio.go.kr — API를 못 쓸 때만. 응답이 느리면 1번 재시도, 안 되면 건너뜀.
+2. **공공 채용 API (공공데이터포털, 환경 변수 `DATA_GO_KR_KEY`)** — 공공기관 공고는 **이걸 먼저**. 키 값은 어디에도 적거나 출력하지 마. 키 준비: `K=$(python3 -c 'import os,urllib.parse;print(urllib.parse.quote(os.environ["DATA_GO_KR_KEY"]))')`
+   - **(가) 인사혁신처 공공취업정보 (승인됨)**: `https://apis.data.go.kr/1760000/PblJobService/getList?serviceKey=$K&numOfRows=100&pageNo=<N>&_type=json` → `response.body.items.item[]` 필드: `insttname`(기관), `title`(공고명), `regdate`·`enddate`(YYYYMMDD 숫자), `idx`(공고 번호), `areacode`, `type01`, `type02`, `readnum`. **오래된 순으로 쌓여 있으니** 먼저 numOfRows=1로 `totalCount`를 받아 마지막 페이지 N = ceil(totalCount/100)과 그 앞 1~2페이지만 조회해. `enddate`가 오늘 이후이고 조건(신입·정규직·사무/행정·목표 직무)에 맞는 것만 골라. 응답에 링크가 없으니 공고명으로 웹 검색해 **기관 공식 채용 페이지나 나라일터(gojobs.go.kr) 원문 링크**를 확인한 뒤 등록하고, 링크를 못 찾으면 메모에 "원문 링크 확인 필요"를 적어 등록. 공무원 시험 공고(공개경쟁채용시험 등)·기간제·인턴은 제외. 출처 = "기타"(메모에 "공공취업정보 API").
+   - **(나) 공공기관 채용정보 (잡알리오 데이터)**: `https://apis.data.go.kr/1051000/recruitment/list?serviceKey=$K&numOfRows=100&pageNo=1&resultType=json&ongoingYn=Y` — 대표가 이 API도 활용신청했으면 작동해. "등록되지 않은 서비스키"(코드 30)가 오면 아직 신청 안 된 것이니 건너뛰고 마지막 줄에 "잡알리오 API 미신청"이라고 적어. 작동하면 기관명·공고명·채용 구분·고용 형태·근무지·마감일·상세 링크를 읽어 등록, 출처 = "잡알리오". 목표 기관 13곳은 여기서 확인.
+   - 두 API 모두 안 되면 **잡알리오 사이트** https://job.alio.go.kr 로 (응답이 느리면 1번 재시도, 안 되면 건너뜀).
 3. **사람인·인크루트** 검색 페이지 (예: https://www.saramin.co.kr/zf_user/search/recruit?searchword=신입+인사). 막히면 건너뜀.
 4. **원티드** — 개별 공고 페이지 https://www.wanted.co.kr/wd/<번호> 만 열어 확인. 번호는 웹 검색(`site:wanted.co.kr/wd 신입 (HRD OR 인사 OR 경영기획 OR 전략기획 OR 해외영업 OR 대외협력)`)으로 찾기. 출처 = "원티드".
 5. **웹 검색 + 기업·기관 공식 채용 페이지** — 웹 검색(`<직무> 신입 공채 2026 하반기`, `<목표 기관명> 채용 공고` 등)으로 공고 소식을 찾고, **기업·기관 공식 채용 사이트의 원문 링크**를 확인해 등록. 자소설닷컴·캐치·잡플래닛·공취사 카페는 검색 결과의 제목으로 "공고가 떴다"는 소식만 참고하고, 링크는 반드시 공식 채용 페이지나 위 1~4의 같은 공고로. 출처 = 처음 알게 된 곳(캐치면 "캐치", 그 외 "기타").
