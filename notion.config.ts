@@ -22,5 +22,7 @@ export const NOTION = {
     lab: { url: "https://app.notion.com/p/e6ea457920344d41a05d90c3055e0d4b", dataSource: "0e7f410d-aa5f-484b-9a5d-c90a2df6df44", view: "https://app.notion.com/p/e6ea457920344d41a05d90c3055e0d4b?v=1266a1e7f34743beaaf84e48e682977d" },
     /** 📮 대표 지시함 — 지시창에서 내린 지시. 아침·저녁 업무 때 처리 */
     orders: { url: "https://app.notion.com/p/42301b1dbf7c8193a19fe3ff63b258ec", dataSource: "42301b1d-bf7c-815e-a502-000b77b817da", view: "https://app.notion.com/p/42301b1dbf7c8193a19fe3ff63b258ec?v=42301b1dbf7c819c8bfd000c5b029e9f" },
+    /** 📅 대표 일정 — 비서 채팅창에서 말한 일정. 당일 07:51 알림 · 전날 17:27 미리보기 */
+    schedule: { url: "https://app.notion.com/p/42301b1dbf7c8130bd22d2e65acff9e6", dataSource: "42301b1d-bf7c-8186-a231-000b79582992", view: "https://app.notion.com/p/42301b1dbf7c8130bd22d2e65acff9e6?v=42301b1dbf7c81e684ef000c11375055" },
   },
 } as const;

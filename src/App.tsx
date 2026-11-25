@@ -31,6 +31,7 @@ import {
 import SchedulePanel from "./SchedulePanel";
 import NotionPanel from "./NotionPanel";
 import FilePanel from "./FilePanel";
+import SecretaryChat from "./SecretaryChat";
 import { formatItem, todaySchedule } from "./game/schedule";
 
 const STAFF_COUNT = STAFF.length;
@@ -422,6 +423,7 @@ function LiveView({
 
         <aside className="live-rail">
           <CeoConsole engine={engine} snap={snap} />
+          <SecretaryChat secName={SEC_NAME} />
           <FilePanel engine={engine} />
           <SchedulePanel snap={snap} />
           <NotionPanel compact />

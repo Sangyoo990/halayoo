@@ -11,7 +11,10 @@ export type ScheduleItem = {
   time?: string;
   title: string;
   note?: string;
-  source: "config" | "local";
+  source: "config" | "local" | "notion";
+  /** Notion 일정 페이지 주소 (source = notion) */
+  url?: string;
+  status?: string;
 };
 
 const KEY = "team-sangyu:my-schedule";
@@ -52,9 +55,20 @@ export function scheduleVersion() {
   return version;
 }
 
+let remote: ScheduleItem[] = [];
+
+/** 📅 대표 일정(Notion)에서 읽어 온 일정으로 교체 — 비서 채팅창이 불러온다 */
+export function setRemoteSchedule(items: ScheduleItem[]) {
+  remote = items;
+  version += 1;
+  listeners.forEach((fn) => fn());
+}
+
 export function allSchedule(): ScheduleItem[] {
   const base: ScheduleItem[] = MY_SCHEDULE.map((item, i) => ({ ...item, id: `config-${i}`, source: "config" }));
-  return [...base, ...local].sort((a, b) => `${a.date} ${a.time ?? "00:00"}`.localeCompare(`${b.date} ${b.time ?? "00:00"}`));
+  const live = remote.filter((r) => r.status !== "취소");
+  const seen = new Set(live.map((r) => `${r.date}|${r.time ?? ""}|${r.title}`));
+  return [...base, ...local.filter((l) => !seen.has(`${l.date}|${l.time ?? ""}|${l.title}`)), ...live].sort((a, b) => `${a.date} ${a.time ?? "00:00"}`.localeCompare(`${b.date} ${b.time ?? "00:00"}`));
 }
 
 export function addSchedule(items: Omit<ScheduleItem, "id" | "source">[]) {

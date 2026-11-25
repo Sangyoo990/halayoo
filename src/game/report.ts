@@ -376,3 +376,103 @@ export async function runOrderNow(orderText: string, team: string, orderUrl?: st
     return { ok: false, detail };
   }
 }
+
+// ── 📅 대표 일정 (비서 채팅창) ─────────────────────────────
+
+export type RemoteEvent = {
+  url: string;
+  title: string;
+  date: string;
+  time: string;
+  place: string;
+  memo: string;
+  status: string;
+};
+
+export type EventInput = { title: string; date: string; time?: string; place?: string; memo?: string; status?: string; raw?: string };
+
+function mcpDetail(err: unknown, what: string) {
+  const code = (err as McpErr)?.code ?? "upstream_error";
+  if (code === "server_not_connected") return "Notion이 연결돼 있지 않아요 (claude.ai 설정 → 커넥터)";
+  if (code === "needs_reauth") return "Notion을 다시 연결해 주세요";
+  if (code === "not_in_manifest" || code === "approval_required" || code === "consent_required") return "Notion 허용이 필요해요";
+  return `${what}에 실패했어요 (${code})`;
+}
+
+export async function loadEvents(): Promise<{ ok: boolean; events: RemoteEvent[]; detail?: string }> {
+  const mcp = await getMcp();
+  if (!mcp) return { ok: false, events: [], detail: "claude.ai에서 열었을 때만 일정을 불러와요" };
+  const { NOTION } = await import("../../notion.config");
+  try {
+    const list = await rows(mcp, NOTION.databases.schedule.view);
+    const events = list
+      .map((r) => ({
+        url: str(r.url),
+        title: str(r["일정"]),
+        date: dateStr(r, "날짜"),
+        time: str(r["시간"]),
+        place: str(r["장소"]),
+        memo: str(r["메모"]),
+        status: str(r["상태"]) || "예정",
+      }))
+      .filter((e) => e.title && e.date)
+      .sort((a, b) => `${a.date} ${a.time || "99:99"}`.localeCompare(`${b.date} ${b.time || "99:99"}`));
+    return { ok: true, events };
+  } catch (err) {
+    return { ok: false, events: [], detail: mcpDetail(err, "일정 불러오기") };
+  }
+}
+
+function eventProps(e: Partial<EventInput>) {
+  const p: Record<string, string | number> = {};
+  if (e.title !== undefined) p["일정"] = e.title.slice(0, 200);
+  if (e.date !== undefined) {
+    p["date:날짜:start"] = e.date;
+    p["date:날짜:is_datetime"] = 0;
+  }
+  if (e.time !== undefined) p["시간"] = e.time;
+  if (e.place !== undefined) p["장소"] = e.place.slice(0, 200);
+  if (e.memo !== undefined) p["메모"] = e.memo.slice(0, 500);
+  if (e.status !== undefined) p["상태"] = e.status;
+  return p;
+}
+
+export async function createEvents(items: EventInput[]): Promise<{ ok: boolean; detail?: string }> {
+  if (!items.length) return { ok: true };
+  const mcp = await getMcp();
+  if (!mcp) return { ok: false, detail: "claude.ai에서 열었을 때만 일정을 저장해요" };
+  const { NOTION } = await import("../../notion.config");
+  try {
+    await mcp.callTool(
+      SERVER,
+      "notion-create-pages",
+      {
+        parent: { type: "data_source_id", data_source_id: NOTION.databases.schedule.dataSource },
+        pages: items.map((e) => ({
+          properties: { ...eventProps({ ...e, status: e.status ?? "예정" }), "원문": (e.raw ?? "").slice(0, 500), "등록": "비서 채팅" },
+        })),
+        allow_async: false,
+      },
+      { cache: false },
+    );
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, detail: mcpDetail(err, "일정 저장") };
+  }
+}
+
+export async function updateEvent(url: string, change: Partial<EventInput>): Promise<{ ok: boolean; detail?: string }> {
+  const mcp = await getMcp();
+  if (!mcp) return { ok: false, detail: "claude.ai에서 열었을 때만 일정을 고쳐요" };
+  try {
+    await mcp.callTool(
+      SERVER,
+      "notion-update-page",
+      { page_id: url, command: "update_properties", properties: eventProps(change), allow_async: false },
+      { cache: false },
+    );
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, detail: mcpDetail(err, "일정 수정") };
+  }
+}

@@ -665,3 +665,14 @@
 .file-list small { display: block; font-size: 10px; color: var(--ink-faint); word-break: keep-all; }
 .file-del { position: absolute; top: 6px; right: 6px; border: 0; background: none; font-size: 12px; cursor: pointer; color: var(--ink-faint); }
 .file-del:hover { color: var(--pink-deep); }
+.sec-body { display: grid; gap: 8px; }
+.sec-log { max-height: 260px; }
+.sec-upcoming { padding: 8px 10px; border: 2px solid var(--ink); border-radius: 12px; background: #fff; }
+.sec-up-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 4px; }
+.sec-up-head button { border: 0; background: none; font-size: 14px; cursor: pointer; }
+.sec-upcoming ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.sec-upcoming li { display: grid; grid-template-columns: auto auto 1fr auto; gap: 6px; align-items: baseline; font-size: 12px; }
+.sec-upcoming li span:first-child { font-weight: 900; }
+.sec-upcoming li span:nth-child(2) { font-family: "Archivo", sans-serif; color: var(--ink-soft); }
+.sec-upcoming li a { color: var(--ink); font-weight: 800; word-break: keep-all; }
+.sec-upcoming li em { font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 99px; background: var(--yellow); border: 1px solid var(--ink); }
