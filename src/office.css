@@ -719,3 +719,13 @@
 .dev-sent li { padding: 5px 8px; border: 1.5px solid var(--pink-line); border-radius: 8px; background: #fff; font-size: 11px; }
 .dev-sent small { display: block; color: var(--ink-faint); font-size: 10px; }
 .dev-sent span { word-break: keep-all; }
+/* 대표 지시창: 지시 대상 팀장 선택 */
+.console-target { display: flex; flex-wrap: wrap; gap: 5px; }
+.console-target button {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 5px 9px; border: 2px solid var(--ink); border-radius: 99px; background: #fff;
+  font-size: 11px; font-weight: 900; cursor: pointer;
+}
+.console-target button small { font-size: 9px; font-weight: 700; color: var(--ink-faint); }
+.console-target button.on { background: var(--pink-deep); color: #fff; }
+.console-target button.on small { color: rgba(255, 255, 255, .8); }

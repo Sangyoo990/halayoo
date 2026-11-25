@@ -609,38 +609,54 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [count]);
 
+  // 지시 대상: "auto" = 말 내용으로 팀 자동 판단(기존 방식), 그 외 = 고른 팀장에게 바로
+  const [target, setTarget] = useState<string>("auto");
+  const lead = target === "auto" ? null : DEPT_LEAD[target];
+  const teamName = target === "auto" ? "" : (DEPT_ROOMS.find((r) => r.id === target)?.name ?? "");
+
+  const register = (value: string, team: string, who: string) => {
+    const immediate = now;
+    void submitOrder(value, team).then(async (r) => {
+      if (!r.ok) {
+        engine.pushChat("staff", `${who} · 지시함`, `⚠️ 지시함에 못 올렸어요 — ${r.detail}`);
+        return;
+      }
+      if (!immediate) {
+        engine.pushChat(
+          "staff",
+          `${who} · 지시함`,
+          `📮 ${team}에 지시 등록 완료. 다음 업무 시간(08:41 / 17:27)에 처리하고 결과를 지시함에 적어둘게요.${r.url ? `\n${r.url}` : ""}`,
+        );
+        return;
+      }
+      const run = await runOrderNow(value, team, r.url);
+      engine.pushChat(
+        "staff",
+        `${who} · 지시함`,
+        run.ok
+          ? `⚡ ${team}에 지시 등록하고 바로 처리 시작했어요. 보통 10~30분 뒤 결과가 지시함에 적히고 푸시가 가요.${r.url ? `\n${r.url}` : ""}`
+          : `📮 ${team}에 지시는 등록했어요. ⚠️ ${run.detail}${r.url ? `\n${r.url}` : ""}`,
+      );
+    });
+  };
+
   const send = (text: string) => {
     const value = text.trim();
     if (!value) return;
-    engine.command(value);
     setDraft("");
-    // 실제 업무 지시면 📮 대표 지시함(Notion)에 남긴다 → 아침·저녁 업무 루틴이 처리
-    const team = engine.orderTeam(value);
-    if (team) {
-      const immediate = now;
-      void submitOrder(value, team).then(async (r) => {
-        if (!r.ok) {
-          engine.pushChat("staff", `${SEC_NAME} · 지시함`, `⚠️ 지시함에 못 올렸어요 — ${r.detail}`);
-          return;
-        }
-        if (!immediate) {
-          engine.pushChat(
-            "staff",
-            `${SEC_NAME} · 지시함`,
-            `📮 ${team}에 지시 등록 완료. 다음 업무 시간(08:41 / 17:27)에 처리하고 결과를 지시함에 적어둘게요.${r.url ? `\n${r.url}` : ""}`,
-          );
-          return;
-        }
-        const run = await runOrderNow(value, team, r.url);
-        engine.pushChat(
-          "staff",
-          `${SEC_NAME} · 지시함`,
-          run.ok
-            ? `⚡ ${team}에 지시 등록하고 바로 처리 시작했어요. 보통 10~30분 뒤 결과가 지시함에 적히고 푸시가 가요.${r.url ? `\n${r.url}` : ""}`
-            : `📮 ${team}에 지시는 등록했어요. ⚠️ ${run.detail}${r.url ? `\n${r.url}` : ""}`,
-        );
-      });
+    // 팀장을 골랐으면: 그 팀장에게 바로 지시 → 📮 지시함에 그 팀으로 등록
+    if (lead && teamName) {
+      engine.pushChat("ceo", CEO.name, `@${lead.name} ${value}`);
+      engine.pushChat("staff", `${lead.name} · ${teamName}`, `네 대표님, 바로 접수할게요.\n“${value}”`);
+      const agent = engine.agentById.get(lead.id);
+      if (agent && agent.status !== "출근 전") engine.say(agent, "대표님 지시 접수!", 3);
+      register(value, teamName, lead.name);
+      return;
     }
+    engine.command(value);
+    // 자동 배정: 실제 업무 지시면 📮 대표 지시함(Notion)에 남긴다 → 아침·저녁 업무 루틴이 처리
+    const team = engine.orderTeam(value);
+    if (team) register(value, team, SEC_NAME);
   };
 
   return (
@@ -655,6 +671,29 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
             {snap.focusMode ? "집중 모드 ON" : "평시 운영"}
           </span>
           {snap.busyWithOrder ? <span className="mini-badge lav">지시 처리 중…</span> : null}
+        </div>
+
+        <div className="console-target" role="radiogroup" aria-label="지시 대상">
+          <button className={target === "auto" ? "on" : ""} onClick={() => setTarget("auto")} role="radio" aria-checked={target === "auto"}>
+            🤖 자동 배정
+          </button>
+          {DEPT_ROOMS.map((room) => {
+            const l = DEPT_LEAD[room.id];
+            if (!l) return null;
+            return (
+              <button
+                key={room.id}
+                className={target === room.id ? "on" : ""}
+                onClick={() => setTarget(room.id)}
+                role="radio"
+                aria-checked={target === room.id}
+                title={`${room.name} ${l.name} 팀장에게 바로 지시`}
+              >
+                {room.icon} {l.name}
+                <small>{room.name}</small>
+              </button>
+            );
+          })}
         </div>
 
         <div className="console-log" ref={logRef}>
@@ -685,7 +724,7 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
           <input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="예: 오늘 소식 / ○○ 자료 찾아줘 / 공고 현황"
+            placeholder={lead ? `${lead.name} 팀장(${teamName})에게 지시` : "예: 오늘 소식 / ○○ 자료 찾아줘 / 공고 현황"}
             aria-label="대표 지시 입력"
           />
           <button type="submit">지시</button>
