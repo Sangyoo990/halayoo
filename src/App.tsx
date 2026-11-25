@@ -441,7 +441,7 @@ function LiveView({
                   </ul>
                 </div>
               </section>
-              <NotionPanel compact />
+              <NotionPanel compact only={["jobs"]} label="🎯 notion.jobs — 최근 수집 공고" />
               <FilePanel engine={engine} />
             </div>
 
@@ -552,6 +552,7 @@ function LiveView({
                     )}
                   </div>
                 </section>
+                <NotionPanel compact only={["approvals"]} label="📋 notion.approvals — 결재 대기" />
             </div>
           </div>
         </div>

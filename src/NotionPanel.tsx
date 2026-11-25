@@ -169,7 +169,17 @@ function describeError(code: string): string {
 
 const NEEDS_ALLOW = new Set(["not_in_manifest", "approval_required", "consent_required"]);
 
-export default function NotionPanel({ compact = false }: { compact?: boolean }) {
+export default function NotionPanel({
+  compact = false,
+  only,
+  label,
+}: {
+  compact?: boolean;
+  /** 이 섹션만 보여준다 (예: ["approvals"]) — 창을 나눠 배치할 때 */
+  only?: SectionKey[];
+  label?: string;
+}) {
+  const pickKeys: SectionKey[] = only ?? (compact ? ["approvals", "jobs"] : SECTIONS.map((s) => s.key));
   const [mcp, setMcp] = useState<McpNs | null | undefined>(undefined);
   const [state, setState] = useState<Partial<Record<SectionKey, SectionState>>>({});
 
@@ -191,7 +201,7 @@ export default function NotionPanel({ compact = false }: { compact?: boolean }) 
   const load = useCallback(
     async (fresh: boolean) => {
       if (!mcp) return;
-      const keys = compact ? (["approvals", "jobs"] as SectionKey[]) : SECTIONS.map((s) => s.key);
+      const keys = pickKeys;
       setState((prev) => {
         const next = { ...prev };
         for (const k of keys) if (!next[k] || next[k]?.status === "error") next[k] = { status: "loading" };
@@ -226,14 +236,15 @@ export default function NotionPanel({ compact = false }: { compact?: boolean }) 
         }),
       );
     },
-    [mcp, compact],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mcp, pickKeys.join(",")],
   );
 
   useEffect(() => {
     if (mcp) void load(false);
   }, [mcp, load]);
 
-  const sections = compact ? SECTIONS.filter((s) => s.key === "approvals" || s.key === "jobs") : SECTIONS;
+  const sections = SECTIONS.filter((s) => pickKeys.includes(s.key));
   const states = sections.map((s) => state[s.key]);
   const allSameError =
     states.length > 0 &&
@@ -243,9 +254,12 @@ export default function NotionPanel({ compact = false }: { compact?: boolean }) 
       : null;
 
   return (
-    <section className={`win ${compact ? "rail-card" : ""} notion-win`} id={compact ? "notion-rail" : "notion-results"}>
+    <section
+      className={`win ${compact ? "rail-card" : ""} notion-win ${only ? `nt-only-${only.join("-")}` : ""}`}
+      id={only ? `notion-${only.join("-")}` : compact ? "notion-rail" : "notion-results"}
+    >
       <div className="win-bar">
-        <span>📥 notion.results{compact ? " — 결재·공고" : " — Notion 결과"}</span>
+        <span>{label ?? `📥 notion.results${compact ? " — 결재·공고" : " — Notion 결과"}`}</span>
         <span className="window-controls">—　▢　✕</span>
       </div>
       <div className="win-body nt-body">
@@ -308,7 +322,7 @@ export default function NotionPanel({ compact = false }: { compact?: boolean }) 
                       {s?.status === "ok" ? (
                         s.rows.length ? (
                           <ul className="nt-list">
-                            {s.rows.slice(0, compact ? 4 : 12).map((row, i) => {
+                            {s.rows.slice(0, only ? 30 : compact ? 4 : 12).map((row, i) => {
                               const title = text(row[section.titleKey]) || "(제목 없음)";
                               const page = safeUrl(row.url);
                               const ext = "link" in section ? safeUrl(row[section.link]) : null;

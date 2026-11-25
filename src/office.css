@@ -680,16 +680,24 @@
 .live-main { display: grid; gap: 14px; min-width: 0; }
 .live-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .live-bottom .feed-body { max-height: 360px; }
-.live-bottom .roster-body { max-height: 420px; overflow-y: auto; }
+.live-bottom .roster-body { max-height: 290px; overflow-y: auto; }
 @media (max-width: 760px) { .live-bottom { grid-template-columns: 1fr; } }
 .live-col { display: grid; gap: 14px; min-width: 0; }
 /* 하단 두 칸 높이 맞추기: 각 칸의 마지막 창이 남은 높이를 채운다 */
 .live-bottom { align-items: stretch; }
 .live-col { display: flex; flex-direction: column; gap: 14px; }
 .live-col > .feed-card { flex: 1 1 auto; display: flex; flex-direction: column; }
-.live-col > .feed-card .feed-body { flex: 1 1 auto; max-height: none; min-height: 180px; contain: size; overflow-y: auto; }
-.live-col > #ceo-approval { flex: 1 1 auto; }
-/* 오른쪽 열도 왼쪽과 바닥을 맞춘다 */
+.live-col > .feed-card .feed-body { flex: 1 1 auto; max-height: none; min-height: 150px; contain: size; overflow-y: auto; }
+/* 가운데 칸: 결재 대기 목록이 남은 높이를 채우고, 넘치면 안에서 스크롤 */
+.live-col > #notion-approvals { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 230px; }
+.live-col > #notion-approvals .nt-body { flex: 1 1 auto; contain: size; overflow-y: auto; min-height: 150px; }
+/* 한 섹션짜리 Notion 창은 길어지지 않게 */
+.nt-only-jobs .nt-list { max-height: 170px; overflow-y: auto; }
+.nt-only-jobs .nt-tip { display: none; }
+.nt-only-jobs .nt-grid, .nt-only-approvals .nt-grid { grid-template-columns: 1fr; }
+/* 오른쪽 열: 비서 채팅 기록이 남은 높이를 채운다 (빈 창이 늘어나지 않게) */
 .live-grid { align-items: stretch; }
 .live-rail { display: flex; flex-direction: column; gap: 12px; }
-.live-rail > :last-child { flex: 1 1 auto; }
+.live-rail > .sec-card { flex: 1 1 auto; display: flex; flex-direction: column; }
+.live-rail > .sec-card .sec-body { flex: 1 1 auto; grid-template-rows: 1fr auto auto; }
+.live-rail > .sec-card .sec-log { max-height: none; min-height: 200px; contain: size; overflow-y: auto; }
