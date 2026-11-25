@@ -6,6 +6,7 @@ import {
   buildReport,
   fetchIntegrations,
   publish,
+  submitOrder,
   type IntegrationStatus,
   type PublishResult,
 } from "./game/report";
@@ -584,6 +585,19 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
     if (!value) return;
     engine.command(value);
     setDraft("");
+    // 실제 업무 지시면 📮 대표 지시함(Notion)에 남긴다 → 아침·저녁 업무 루틴이 처리
+    const team = engine.orderTeam(value);
+    if (team) {
+      void submitOrder(value, team).then((r) =>
+        engine.pushChat(
+          "staff",
+          `${SEC_NAME} · 지시함`,
+          r.ok
+            ? `📮 ${team}에 지시 등록 완료. 다음 업무 시간(08:41 / 17:27)에 처리하고 결과를 지시함에 적어둘게요.${r.url ? `\n${r.url}` : ""}`
+            : `⚠️ 지시함에 못 올렸어요 — ${r.detail}`,
+        ),
+      );
+    }
   };
 
   return (

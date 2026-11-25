@@ -235,6 +235,50 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
   }
 }
 
+export type OrderResult = { ok: boolean; detail: string; url?: string };
+
+/** 지시창의 지시를 📮 대표 지시함에 "접수"로 남긴다 — 아침(08:41)·저녁(17:27) 업무가 꺼내서 처리한다 */
+export async function submitOrder(text: string, team: string): Promise<OrderResult> {
+  const mcp = await getMcp();
+  if (!mcp) return { ok: false, detail: "claude.ai에서 열었을 때만 지시함에 등록돼요" };
+  const { NOTION } = await import("../../notion.config");
+  try {
+    const res = await mcp.callTool(
+      SERVER,
+      "notion-create-pages",
+      {
+        parent: { type: "data_source_id", data_source_id: NOTION.databases.orders.dataSource },
+        pages: [
+          {
+            properties: {
+              "지시": text.slice(0, 1900),
+              "담당팀": team,
+              "상태": "접수",
+              "date:접수일:start": seoulToday(),
+              "date:접수일:is_datetime": 0,
+            },
+          },
+        ],
+      },
+      { cache: false },
+    );
+    const created = (res.payload as { pages?: { url?: string }[] } | undefined)?.pages?.[0];
+    return { ok: true, detail: "지시함에 등록했어요", url: created?.url };
+  } catch (err) {
+    const e = err as McpErr;
+    const code = e?.code ?? "upstream_error";
+    const detail =
+      code === "server_not_connected"
+        ? "Notion이 연결돼 있지 않아요 (claude.ai 설정 → 커넥터)"
+        : code === "needs_reauth"
+          ? "Notion을 다시 연결해 주세요"
+          : code === "not_in_manifest" || code === "approval_required" || code === "consent_required"
+            ? "Notion 쓰기 허용이 필요해요"
+            : `지시함 등록에 실패했어요 (${code})`;
+    return { ok: false, detail };
+  }
+}
+
 /** 연동 상태 — 대시보드 표시는 company.config.ts 의 INTEGRATIONS 를 쓴다 */
 export async function fetchIntegrations(): Promise<IntegrationStatus> {
   return {};

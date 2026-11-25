@@ -998,7 +998,7 @@ export class Company {
       "⚽ 축구 — 한국 남자 A대표팀 / EPL 빅6 / 레알 마드리드",
       "⚾ 야구 — KBO 전체 / 롯데 자이언츠",
       "📰 헤드라인 — 국내 · 해외 종합",
-      "※ 아직 뉴스 연동 전이라 실제 기사 내용은 비어 있어요. 연동되면 여기 채워집니다.",
+      "📰 실제 기사는 매일 아침 Notion ‘일일 소식’에 올라가요 (오른쪽 Notion 창에서 확인).",
     );
     const reporter = this.deptAgents(BRIEFING_DEPT).find((a) => /축구|소식/.test(a.task ?? "")) ?? this.agentById.get(SEC_ID);
     this.pushChat("staff", reporter ? `${reporter.name} · 소식 요약` : SEC_NAME, lines.join("\n"));
@@ -1018,7 +1018,7 @@ export class Company {
     this.pushChat(
       "staff",
       `${lead.name} · ${roomOf(lab).name}`,
-      "회의록 접수했어요 (월 2회 정기 검토).\n① 회의 내용 반영 ② 향후 발전 방향 제안 ③ 개선·추가 건의 순서로 정리해서 올릴게요.\n※ 파일 연동 전이라 지금은 접수·응대까지만 돼요.",
+      "회의록 접수했어요 (월 2회 정기 검토).\n① 회의 내용 반영 ② 향후 발전 방향 제안 ③ 개선·추가 건의 순서로 정리해서 올릴게요.\n📮 대표 지시함에 등록하고, 다음 업무 시간(08:41 / 17:27)에 Drive 회의록을 읽어 처리합니다.",
     );
     this.pushLog("📝", `대표 회의록 전달 → ${roomOf(lab).name} 검토 시작`, "yellow");
     if (lead.status !== "출근 전") {
@@ -1048,7 +1048,7 @@ export class Company {
     this.pushChat(
       "staff",
       `${helper.name} · ${roomOf(deptId).name}`,
-      `요청 접수했어요: “${text}”\n바로 찾아서 정리해 올릴게요.\n※ 검색 연동 전이라 지금은 접수·응대까지만 돼요.`,
+      `요청 접수했어요: “${text}”\n📮 대표 지시함에 등록하고, 다음 업무 시간(08:41 / 17:27)에 찾아서 정리해 올릴게요.`,
     );
     this.pushLog("🔎", `대표 요청 접수 — ${helper.name}: “${text}”`, "yellow");
     if (helper.status === "출근 전" || this.side.gen || this.locked.has(helper.id)) {
@@ -1123,6 +1123,20 @@ export class Company {
   private spotlightRoom(roomId: string, seconds: number) {
     this.spotlight = roomId;
     this.spotlightUntil = this.elapsed + seconds;
+  }
+
+  /** 지시창 문장이 실제 업무 지시인지 (지시함에 올릴지) 판단하고 담당팀 이름을 돌려준다 */
+  orderTeam(raw: string): string | null {
+    const text = raw.trim();
+    if (!text) return null;
+    if (/지금 뭐해|뭐 해|어디야|상태/.test(text)) return null;
+    if (/^(집중|자유|쉬어|자리로|복귀|착석|빨리|서둘|회의|모여|소집|브리핑|승인|오케이|고고)/.test(text)) return null;
+    const isOrder =
+      /회의록|자료|검색|찾아|알아봐|조사|추천|정리해|분석|수집|작성|올려|보고해|해와|해줘|해라|하도록|시켜|지시|부탁|준비해/.test(text);
+    if (!isOrder) return null;
+    const deptId = /회의록/.test(text) ? "lab" : this.matchDept(text) ?? BRIEFING_DEPT;
+    const NAMES: Record<string, string> = { career: "취업준비팀", support: "일반지원팀", global: "국제동향보고서팀", lab: "연구소모임팀" };
+    return NAMES[deptId] ?? "일반지원팀";
   }
 
   /** 질문에 등장한 부서·이름을 찾아낸다 (구체적인 키워드부터 검사) */
