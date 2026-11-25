@@ -423,7 +423,7 @@ function LiveView({
 
         <aside className="live-rail">
           <CeoConsole engine={engine} snap={snap} />
-          <SecretaryChat secName={SEC_NAME} />
+          <SecretaryChat secName={SECRETARY_SEED.name} />
           <FilePanel engine={engine} />
           <SchedulePanel snap={snap} />
           <NotionPanel compact />
