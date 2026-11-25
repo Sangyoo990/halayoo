@@ -422,24 +422,27 @@ function LiveView({
         <div className="live-main">
           <OfficeWorld engine={engine} snap={snap} selectedId={selectedId} follow={follow} onSelect={onSelect} />
           <div className="live-bottom">
-            <section className="win rail-card feed-card">
-              <div className="win-bar">
-                <span>📡 live.feed</span>
-                <span className="window-controls">—　▢　✕</span>
-              </div>
-              <div className="win-body feed-body">
-                {snap.meetingTitle ? <div className="feed-now">💬 회의 진행 중 — {snap.meetingTitle}</div> : null}
-                <ul className="feed-list">
-                  {snap.log.map((entry) => (
-                    <li key={entry.id} className={entry.tone}>
-                      <b>{entry.time}</b>
-                      <i>{entry.icon}</i>
-                      <span>{entry.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
+            <div className="live-col">
+              <section className="win rail-card feed-card">
+                <div className="win-bar">
+                  <span>📡 live.feed</span>
+                  <span className="window-controls">—　▢　✕</span>
+                </div>
+                <div className="win-body feed-body">
+                  {snap.meetingTitle ? <div className="feed-now">💬 회의 진행 중 — {snap.meetingTitle}</div> : null}
+                  <ul className="feed-list">
+                    {snap.log.map((entry) => (
+                      <li key={entry.id} className={entry.tone}>
+                        <b>{entry.time}</b>
+                        <i>{entry.icon}</i>
+                        <span>{entry.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+              <NotionPanel compact />
+            </div>
 
             <section className="win rail-card">
               <div className="win-bar">
@@ -502,7 +505,6 @@ function LiveView({
           <SecretaryChat secName={SECRETARY_SEED.name} />
           <SchedulePanel snap={snap} />
           <FilePanel engine={engine} />
-          <NotionPanel compact />
 
           <section className="win rail-card" id="ceo-approval">
             <div className="win-bar">

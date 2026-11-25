@@ -682,3 +682,4 @@
 .live-bottom .feed-body { max-height: 360px; }
 .live-bottom .roster-body { max-height: 420px; overflow-y: auto; }
 @media (max-width: 760px) { .live-bottom { grid-template-columns: 1fr; } }
+.live-col { display: grid; gap: 14px; min-width: 0; }
