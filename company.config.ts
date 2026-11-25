@@ -272,11 +272,11 @@ export const MY_SCHEDULE: { date: string; time?: string; title: string; note?: s
  * 오피스의 🛠️ dev.chat 창에 쓴 요청은 Claude(개발 대화)로 바로 전달되고, 답은 그 창의 댓글 스레드로 온다.
  */
 export const DEV_LEAD = {
-  name: "한도윤",
-  gender: "m" as "f" | "m",
+  name: "박소민",
+  gender: "f" as "f" | "m",
   role: "개발팀장 · 오피스 개발·수정 (Claude 직통)",
   task: "오피스 화면·기능 개선 요청 처리",
-  colors: ["#2a2a2a", "#d8eedb", "#1e5b3a"] as [string, string, string],
+  colors: ["#5a3a2e", "#d8eedb", "#1e5b3a"] as [string, string, string],
   thoughts: ["요청 오면 바로 고쳐서 다시 올릴게요.", "이 창 높이, 조금 더 줄일 수 있겠는데.", "버그는 원인부터 찾고 고칩니다."],
   duties: [
     "오피스 화면 배치·디자인 수정",

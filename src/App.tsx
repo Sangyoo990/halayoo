@@ -576,7 +576,6 @@ function LiveView({
           <CeoConsole engine={engine} snap={snap} />
           <SecretaryChat secName={SECRETARY_SEED.name} />
           <DevChat devName={DEV_SEED.name} />
-          <SchedulePanel snap={snap} />
 
         </aside>
       </section>
