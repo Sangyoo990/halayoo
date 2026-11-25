@@ -683,3 +683,13 @@
 .live-bottom .roster-body { max-height: 420px; overflow-y: auto; }
 @media (max-width: 760px) { .live-bottom { grid-template-columns: 1fr; } }
 .live-col { display: grid; gap: 14px; min-width: 0; }
+/* 하단 두 칸 높이 맞추기: 각 칸의 마지막 창이 남은 높이를 채운다 */
+.live-bottom { align-items: stretch; }
+.live-col { display: flex; flex-direction: column; gap: 14px; }
+.live-col > .feed-card { flex: 1 1 auto; display: flex; flex-direction: column; }
+.live-col > .feed-card .feed-body { flex: 1 1 auto; max-height: none; min-height: 180px; contain: size; overflow-y: auto; }
+.live-col > #ceo-approval { flex: 1 1 auto; }
+/* 오른쪽 열도 왼쪽과 바닥을 맞춘다 */
+.live-grid { align-items: stretch; }
+.live-rail { display: flex; flex-direction: column; gap: 12px; }
+.live-rail > :last-child { flex: 1 1 auto; }

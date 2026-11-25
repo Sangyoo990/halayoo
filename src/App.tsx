@@ -442,61 +442,117 @@ function LiveView({
                 </div>
               </section>
               <NotionPanel compact />
+              <FilePanel engine={engine} />
             </div>
 
-            <section className="win rail-card">
-              <div className="win-bar">
-                <span>👥 staff.roster</span>
-                <span className="window-controls">—　▢　✕</span>
-              </div>
-              <div className="win-body roster-body">
-                <div className="roster-dept">
-                  <p>
-                    <b>🏛️ 대표실 · 수행비서</b>
-                  </p>
-                  <div className="roster-chips">
-                    <button
-                      className={`roster-chip ${selectedId === SECRETARY_SEED.id ? "on" : ""}`}
-                      onClick={() => {
-                        const agent = engine.agentById.get(SECRETARY_SEED.id);
-                        if (agent) onSelect(agent);
-                      }}
-                    >
-                      <i style={{ background: SECRETARY_SEED.shirt, borderColor: SECRETARY_SEED.hair }} />
-                      {SECRETARY_SEED.name}
-                      <small>{engine.agentById.get(SECRETARY_SEED.id)?.status ?? "출근 전"}</small>
-                    </button>
-                  </div>
+            <div className="live-col">
+              <section className="win rail-card">
+                <div className="win-bar">
+                  <span>👥 staff.roster</span>
+                  <span className="window-controls">—　▢　✕</span>
                 </div>
-                {DEPT_ROOMS.map((room) => (
-                  <div className="roster-dept" key={room.id}>
+                <div className="win-body roster-body">
+                  <div className="roster-dept">
                     <p>
-                      <b>
-                        {room.icon} {room.name}
-                        {DEPT_BRIEF[room.id]?.priority ? <em className="priority-badge">최우선</em> : null}
-                      </b>
-                      <i className={`rm-dot ${statusClass[snap.deptStatus[room.id] ?? "대기"]}`} />
+                      <b>🏛️ 대표실 · 수행비서</b>
                     </p>
                     <div className="roster-chips">
-                      {STAFF.filter((s) => s.deptId === room.id).map((seed) => {
-                        const agent = engine.agentById.get(seed.id);
-                        return (
-                          <button
-                            key={seed.id}
-                            className={`roster-chip ${selectedId === seed.id ? "on" : ""}`}
-                            onClick={() => agent && onSelect(agent)}
-                          >
-                            <i style={{ background: seed.shirt, borderColor: seed.hair }} />
-                            {seed.name}
-                            <small>{agent?.status ?? "출근 전"}</small>
-                          </button>
-                        );
-                      })}
+                      <button
+                        className={`roster-chip ${selectedId === SECRETARY_SEED.id ? "on" : ""}`}
+                        onClick={() => {
+                          const agent = engine.agentById.get(SECRETARY_SEED.id);
+                          if (agent) onSelect(agent);
+                        }}
+                      >
+                        <i style={{ background: SECRETARY_SEED.shirt, borderColor: SECRETARY_SEED.hair }} />
+                        {SECRETARY_SEED.name}
+                        <small>{engine.agentById.get(SECRETARY_SEED.id)?.status ?? "출근 전"}</small>
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
+                  {DEPT_ROOMS.map((room) => (
+                    <div className="roster-dept" key={room.id}>
+                      <p>
+                        <b>
+                          {room.icon} {room.name}
+                          {DEPT_BRIEF[room.id]?.priority ? <em className="priority-badge">최우선</em> : null}
+                        </b>
+                        <i className={`rm-dot ${statusClass[snap.deptStatus[room.id] ?? "대기"]}`} />
+                      </p>
+                      <div className="roster-chips">
+                        {STAFF.filter((s) => s.deptId === room.id).map((seed) => {
+                          const agent = engine.agentById.get(seed.id);
+                          return (
+                            <button
+                              key={seed.id}
+                              className={`roster-chip ${selectedId === seed.id ? "on" : ""}`}
+                              onClick={() => agent && onSelect(agent)}
+                            >
+                              <i style={{ background: seed.shirt, borderColor: seed.hair }} />
+                              {seed.name}
+                              <small>{agent?.status ?? "출근 전"}</small>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+                <section className="win rail-card" id="ceo-approval">
+                  <div className="win-bar">
+                    <span>✅ ceo.approval</span>
+                    <span className="window-controls">—　▢　✕</span>
+                  </div>
+                  <div className={`win-body approval-body ${snap.approvalPending ? "pending" : ""}`}>
+                    {snap.approvalPending ? (
+                      <>
+                        <div className="approval-top">
+                          <span className="mini-badge yellow">{current.badge}</span>
+                          <span className="score blink">
+                            결재 {snap.approvalDone + 1}/{snap.approvalTotal}
+                          </span>
+                        </div>
+                        <h3>{current.title}</h3>
+                        <p>
+                          {deptName(current.fromDept)} 안건 · 회의실에서 {approversOf(current.fromDept)}이(가) 대표님을 기다리고
+                          있어요.
+                        </p>
+                        <div className="reason-list">
+                          {current.reasons.map((reason) => (
+                            <span key={reason}>{reason}</span>
+                          ))}
+                        </div>
+                        <button className="btn approve-button" onClick={onApprove}>
+                          이 안건 승인하기
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="approval-top">
+                          <span className="mini-badge mint">{snap.approved ? "오늘 결재 완료" : "결재 대기 없음"}</span>
+                        </div>
+                        <h3>
+                          {snap.approved ? `결재 ${snap.approvalTotal}건 모두 승인했어요` : `오늘 결재 예정 ${TODAY_APPROVALS.length}건`}
+                        </h3>
+                        <div className="reason-list">
+                          {(snap.approved ? snap.approvedTitles : TODAY_APPROVALS.map((item) => item.title)).map((title) => (
+                            <span key={title}>
+                              {snap.approved ? "✓ " : "· "}
+                              {title}
+                            </span>
+                          ))}
+                        </div>
+                        <p>
+                          {snap.approved
+                            ? "승인된 안건은 팀별로 최종 정리 후 보관합니다."
+                            : "팀별 업무가 끝나면 안건이 회의실로 올라와요."}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </section>
+            </div>
           </div>
         </div>
 
@@ -504,61 +560,6 @@ function LiveView({
           <CeoConsole engine={engine} snap={snap} />
           <SecretaryChat secName={SECRETARY_SEED.name} />
           <SchedulePanel snap={snap} />
-          <FilePanel engine={engine} />
-
-          <section className="win rail-card" id="ceo-approval">
-            <div className="win-bar">
-              <span>✅ ceo.approval</span>
-              <span className="window-controls">—　▢　✕</span>
-            </div>
-            <div className={`win-body approval-body ${snap.approvalPending ? "pending" : ""}`}>
-              {snap.approvalPending ? (
-                <>
-                  <div className="approval-top">
-                    <span className="mini-badge yellow">{current.badge}</span>
-                    <span className="score blink">
-                      결재 {snap.approvalDone + 1}/{snap.approvalTotal}
-                    </span>
-                  </div>
-                  <h3>{current.title}</h3>
-                  <p>
-                    {deptName(current.fromDept)} 안건 · 회의실에서 {approversOf(current.fromDept)}이(가) 대표님을 기다리고
-                    있어요.
-                  </p>
-                  <div className="reason-list">
-                    {current.reasons.map((reason) => (
-                      <span key={reason}>{reason}</span>
-                    ))}
-                  </div>
-                  <button className="btn approve-button" onClick={onApprove}>
-                    이 안건 승인하기
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="approval-top">
-                    <span className="mini-badge mint">{snap.approved ? "오늘 결재 완료" : "결재 대기 없음"}</span>
-                  </div>
-                  <h3>
-                    {snap.approved ? `결재 ${snap.approvalTotal}건 모두 승인했어요` : `오늘 결재 예정 ${TODAY_APPROVALS.length}건`}
-                  </h3>
-                  <div className="reason-list">
-                    {(snap.approved ? snap.approvedTitles : TODAY_APPROVALS.map((item) => item.title)).map((title) => (
-                      <span key={title}>
-                        {snap.approved ? "✓ " : "· "}
-                        {title}
-                      </span>
-                    ))}
-                  </div>
-                  <p>
-                    {snap.approved
-                      ? "승인된 안건은 팀별로 최종 정리 후 보관합니다."
-                      : "팀별 업무가 끝나면 안건이 회의실로 올라와요."}
-                  </p>
-                </>
-              )}
-            </div>
-          </section>
 
         </aside>
       </section>
