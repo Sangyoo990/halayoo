@@ -136,11 +136,32 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
 
   try {
     // 1) 실제 결과 읽기 — 읽기가 실패해도 브리핑은 만든다 (그 칸은 "확인 못 함")
-    const [approvalsRes, jobsRes] = await Promise.allSettled([
+    const [approvalsRes, jobsRes, libraryRes, ordersRes] = await Promise.allSettled([
       rows(mcp, NOTION.databases.approvals.view),
       rows(mcp, NOTION.databases.jobs.view),
+      rows(mcp, NOTION.databases.library.view),
+      rows(mcp, NOTION.databases.orders.view),
     ]);
-    const readFailed = { approvals: approvalsRes.status === "rejected", jobs: jobsRes.status === "rejected" };
+    const readFailed = {
+      approvals: approvalsRes.status === "rejected",
+      jobs: jobsRes.status === "rejected",
+      library: libraryRes.status === "rejected",
+      orders: ordersRes.status === "rejected",
+    };
+    // 🎓 취업 자료실 — 오늘(또는 어제 밤 이후) 올라온 자료. 정밀 분석·강의 추천 같은 미션 결과가 여기 들어간다
+    const yesterday = new Date(Date.now() - 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+    const library = (libraryRes.status === "fulfilled" ? libraryRes.value : []).filter((r) => dateStr(r, "날짜") === today);
+    const libraryOrder = ["자료 분석", "공고 부합도", "경험 정리 검토", "강의 추천", "가산점·자격증", "면접 기본기", "합격 자소서", "다국적 기업 검토", "유튜브"];
+    library.sort((a, b) => {
+      const ia = libraryOrder.indexOf(str(a["구분"]));
+      const ib = libraryOrder.indexOf(str(b["구분"]));
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+    // 📮 대표 지시함 — 어제·오늘 지시와 처리 상태
+    const orders = (ordersRes.status === "fulfilled" ? ordersRes.value : []).filter((r) => {
+      const d = dateStr(r, "접수일");
+      return d === today || d === yesterday || str(r["상태"]) === "접수" || str(r["상태"]) === "처리 중";
+    });
     const approvals = approvalsRes.status === "fulfilled" ? approvalsRes.value.filter((r) => str(r["상태"]) === "결재 대기") : [];
     const jobs = (jobsRes.status === "fulfilled" ? jobsRes.value : []).sort((a, b) =>
       dateStr(b, "수집일").localeCompare(dateStr(a, "수집일")),
@@ -162,6 +183,27 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
     lines.push("## ✅ 결재 대기");
     if (readFailed.approvals) lines.push("- ⚠️ 결재함을 읽지 못해 확인 못 함");
     else lines.push(...(approvals.length ? approvals.map((r) => `- ${link(str(r["안건"]) || "(제목 없음)", str(r.url))} · ${md(str(r["팀"]))}`) : ["- 없음"]));
+    lines.push("", "## 📮 대표 지시 처리 현황");
+    if (readFailed.orders) lines.push("- ⚠️ 지시함을 읽지 못해 확인 못 함");
+    else lines.push(
+      ...(orders.length
+        ? orders.map((r) => {
+            const done = str(r["결과 링크"]);
+            const result = md(str(r["처리 결과"])).slice(0, 160);
+            return `- [${md(str(r["상태"])) || "접수"}] ${link(str(r["지시"]) || "(지시)", str(r.url))} · ${md(str(r["담당팀"]))}${result ? ` — ${result}` : ""}${/^https?:\/\//.test(done) ? ` · [결과](${done})` : ""}`;
+          })
+        : ["- 없음"]),
+    );
+    lines.push("", "## 🎓 오늘 취업 자료실");
+    if (readFailed.library) lines.push("- ⚠️ 자료실을 읽지 못해 확인 못 함");
+    else lines.push(
+      ...(library.length
+        ? library.slice(0, 25).map((r) => {
+            const summary = md(str(r["요약"])).slice(0, 140);
+            return `- [${md(str(r["구분"]))}] ${link(str(r["제목"]) || "(제목 없음)", str(r.url))}${summary ? ` — ${summary}` : ""}`;
+          })
+        : ["- 오늘 올라온 자료 없음"]),
+    );
     lines.push("", "## 🎯 오늘 수집 공고");
     if (readFailed.jobs) lines.push("- ⚠️ 공고 목록을 읽지 못해 확인 못 함");
     else lines.push(
@@ -182,7 +224,8 @@ export async function publish(report: DayReport, extras: PublishExtras = { today
     lines.push(`- 단계: ${md(report.phase)} · 완료 ${report.counts.done}팀 · 진행 ${report.counts.working}팀`);
     lines.push(...report.log.slice(-12).map((l) => `- ${l.time} ${md(l.text)}`));
 
-    const summary = `${readFailed.approvals || readFailed.jobs ? "⚠️ 일부 확인 못 함 · " : ""}결재 대기 ${approvals.length}건 · 오늘 공고 ${todayJobs.length}건 · 마감 임박 ${urgent.length}건 · 오늘 일정 ${extras.todaySchedule.length}건`;
+    const anyFailed = Object.values(readFailed).some(Boolean);
+    const summary = `${anyFailed ? "⚠️ 일부 확인 못 함 · " : ""}결재 대기 ${approvals.length}건 · 지시 ${orders.length}건 · 자료실 ${library.length}건 · 오늘 공고 ${todayJobs.length}건 · 마감 임박 ${urgent.length}건 · 오늘 일정 ${extras.todaySchedule.length}건`;
 
     // 3) 페이지 만들기
     const res = await mcp.callTool(
