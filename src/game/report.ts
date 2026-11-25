@@ -326,3 +326,53 @@ export async function submitOrder(text: string, team: string): Promise<OrderResu
 export async function fetchIntegrations(): Promise<IntegrationStatus> {
   return {};
 }
+
+/** 오피스 아티팩트 주소 — 공유 파일(asset)을 루틴이 받아 읽을 때 쓴다 */
+export const OFFICE_ARTIFACT_URL = "https://claude.ai/artifact/JyQYmSJUzXXnDZhD3EEYnE";
+/** 지시함을 처리하는 루틴 (아침 업무 루틴의 📮 지시함 절차를 그대로 쓴다) */
+const ORDER_TRIGGER_ID = "trig_01Y8Tdr8HtKMHYez8WhE1k41";
+const REMOTE = "Claude Code Remote";
+
+export type Attachment = { name: string; id: string; type: string };
+
+export function attachmentText(files: Attachment[]) {
+  if (!files.length) return "";
+  return (
+    "\n📎 첨부 파일 (오피스 파일 공유창):\n" +
+    files
+      .map((f) => `- ${f.name} (${f.type}) · asset id ${f.id} · Artifact 도구 read: url=${OFFICE_ARTIFACT_URL}, path=${f.id}`)
+      .join("\n")
+  );
+}
+
+/** ⚡ 바로 처리 — 아침 업무 루틴을 지금 한 번 돌리되, 📮 지시함 절차만 이 지시 1건에 대해 수행하게 한다 */
+export async function runOrderNow(orderText: string, team: string, orderUrl?: string): Promise<OrderResult> {
+  const mcp = await getMcp();
+  if (!mcp) return { ok: false, detail: "claude.ai에서 열었을 때만 바로 처리할 수 있어요" };
+  const text = [
+    "⚡ 대표 즉시 처리 요청 — 이번 실행은 정기 업무(0~4단계, 푸시 형식 포함)를 모두 건너뛰고, 📮 대표 지시함 처리 절차만 아래 지시 1건에 대해 수행해.",
+    `담당팀: ${team}`,
+    orderUrl ? `지시함 항목: ${orderUrl}` : "지시함 항목: 지시함에서 이 지시 원문과 같은 '접수' 항목을 찾아 처리해.",
+    `지시 원문:\n${orderText}`,
+    "끝나면 지시함 항목을 완료/처리 중/보류로 수정하고, 마지막 응답(푸시)은 '⚡ 즉시 지시 처리 — <결론 1줄>' 형식으로 2줄 이내.",
+  ].join("\n");
+  try {
+    await mcp.callTool(REMOTE, "fire_trigger", { trigger_id: ORDER_TRIGGER_ID, text }, { cache: false });
+    return { ok: true, detail: "업무 루틴을 지금 돌렸어요" };
+  } catch (err) {
+    const code = (err as McpErr)?.code ?? "upstream_error";
+    const detail =
+      code === "server_not_connected" || code === "selection_required"
+        ? "Claude Code Remote 커넥터가 연결돼 있지 않아요 — 다음 업무 시간에 처리돼요"
+        : code === "needs_reauth"
+          ? "Claude Code Remote를 다시 연결해 주세요 — 다음 업무 시간에 처리돼요"
+          : code === "not_in_manifest" || code === "approval_required" || code === "consent_required"
+            ? "바로 처리 허용이 필요해요 — 허용하면 다음부터 바로 돌아가요"
+            : code === "blocked_by_policy"
+              ? "조직 정책상 바로 처리를 쓸 수 없어요 — 다음 업무 시간에 처리돼요"
+              : code === "server_unavailable" || code === "upstream_error"
+                ? `실행 여부를 확인 못 했어요 (${code}) — 지시함은 남아 있으니 다음 업무 시간에 처리돼요`
+                : `바로 처리에 실패했어요 (${code}) — 다음 업무 시간에 처리돼요`;
+    return { ok: false, detail };
+  }
+}

@@ -7,6 +7,7 @@ import {
   fetchIntegrations,
   publish,
   submitOrder,
+  runOrderNow,
   type IntegrationStatus,
   type PublishResult,
 } from "./game/report";
@@ -29,6 +30,7 @@ import {
 } from "../company.config";
 import SchedulePanel from "./SchedulePanel";
 import NotionPanel from "./NotionPanel";
+import FilePanel from "./FilePanel";
 import { formatItem, todaySchedule } from "./game/schedule";
 
 const STAFF_COUNT = STAFF.length;
@@ -420,6 +422,7 @@ function LiveView({
 
         <aside className="live-rail">
           <CeoConsole engine={engine} snap={snap} />
+          <FilePanel engine={engine} />
           <SchedulePanel snap={snap} />
           <NotionPanel compact />
 
@@ -572,6 +575,7 @@ const QUICK_ORDERS = [
 
 function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
   const [draft, setDraft] = useState("");
+  const [now, setNow] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const count = snap.chat.length;
 
@@ -588,15 +592,29 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
     // 실제 업무 지시면 📮 대표 지시함(Notion)에 남긴다 → 아침·저녁 업무 루틴이 처리
     const team = engine.orderTeam(value);
     if (team) {
-      void submitOrder(value, team).then((r) =>
+      const immediate = now;
+      void submitOrder(value, team).then(async (r) => {
+        if (!r.ok) {
+          engine.pushChat("staff", `${SEC_NAME} · 지시함`, `⚠️ 지시함에 못 올렸어요 — ${r.detail}`);
+          return;
+        }
+        if (!immediate) {
+          engine.pushChat(
+            "staff",
+            `${SEC_NAME} · 지시함`,
+            `📮 ${team}에 지시 등록 완료. 다음 업무 시간(08:41 / 17:27)에 처리하고 결과를 지시함에 적어둘게요.${r.url ? `\n${r.url}` : ""}`,
+          );
+          return;
+        }
+        const run = await runOrderNow(value, team, r.url);
         engine.pushChat(
           "staff",
           `${SEC_NAME} · 지시함`,
-          r.ok
-            ? `📮 ${team}에 지시 등록 완료. 다음 업무 시간(08:41 / 17:27)에 처리하고 결과를 지시함에 적어둘게요.${r.url ? `\n${r.url}` : ""}`
-            : `⚠️ 지시함에 못 올렸어요 — ${r.detail}`,
-        ),
-      );
+          run.ok
+            ? `⚡ ${team}에 지시 등록하고 바로 처리 시작했어요. 보통 10~30분 뒤 결과가 지시함에 적히고 푸시가 가요.${r.url ? `\n${r.url}` : ""}`
+            : `📮 ${team}에 지시는 등록했어요. ⚠️ ${run.detail}${r.url ? `\n${r.url}` : ""}`,
+        );
+      });
     }
   };
 
@@ -647,6 +665,10 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
           />
           <button type="submit">지시</button>
         </form>
+        <label className="console-now" title="지시함에 등록하면서 업무 루틴을 지금 바로 한 번 돌려요">
+          <input type="checkbox" checked={now} onChange={(e) => setNow(e.target.checked)} />
+          ⚡ 바로 처리 (다음 업무 시간을 기다리지 않음)
+        </label>
       </div>
     </section>
   );
