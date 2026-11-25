@@ -6,9 +6,25 @@ import { setRemoteSchedule } from "./game/schedule";
    저장된 일정은 당일 아침 07:51 아이폰 알림, 전날 저녁 마감 요약에 "내일 일정"으로 나간다. */
 
 type Use = (n: string) => Promise<unknown>;
-type SampleFn = {
+type SampleFn = ((input: string, opts?: { cache?: false }) => Promise<{ text: string; truncated?: boolean }>) & {
   json: <T>(input: string, opts?: { cache?: false }) => Promise<T>;
 };
+type SampleErr = { code?: string; message?: string; text?: string };
+
+/** 답 텍스트에서 JSON 객체 하나를 꺼낸다 (코드 펜스·앞뒤 문장 허용) */
+function parsePlan(text: string): Plan | null {
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = fence ? fence[1] : text;
+  const a = body.indexOf("{");
+  const b = body.lastIndexOf("}");
+  if (a < 0 || b <= a) return null;
+  try {
+    const v = JSON.parse(body.slice(a, b + 1));
+    return v && typeof v === "object" ? (v as Plan) : null;
+  } catch {
+    return null;
+  }
+}
 type Line = { id: string; from: "me" | "sec"; text: string; time: string };
 type Plan = {
   reply?: string;
@@ -104,7 +120,7 @@ export default function SecretaryChat({ secName }: { secName: string }) {
   useEffect(() => {
     void refresh();
     const use = (window as unknown as { claude?: { use: Use } }).claude?.use;
-    if (use) use("sample").then((s) => setSample((s as SampleFn) ?? null)).catch(() => setSample(null));
+    if (use) use("sample").then((s) => setSample(() => (s as SampleFn) ?? null)).catch(() => setSample(null)); // 함수라서 반드시 () => 로 감싸 저장 (React가 업데이트 함수로 오해해 실행해 버림)
   }, [refresh]);
 
   useEffect(() => {
@@ -155,18 +171,40 @@ JSON 하나로만 답해:
 update에는 바꿀 필드만 넣어 (안 바꾸는 필드는 빼).`,
       ].join("\n\n");
 
-      let plan: Plan;
+      let plan: Plan | null = null;
+      let failure: SampleErr | null = null;
       try {
         plan = await sample.json<Plan>(prompt, { cache: false });
       } catch (err) {
-        const code = (err as { code?: string })?.code ?? "upstream_error";
+        failure = err as SampleErr;
+        // json 방식이 연결·형식 문제로 실패하면, 일반 답변 방식으로 한 번만 다시 받아 직접 해석한다
+        if (failure?.code === "upstream_error" || failure?.code === "invalid_json" || failure?.code === "capability_removed") {
+          const salvaged = failure.text ? parsePlan(failure.text) : null;
+          if (salvaged) {
+            plan = salvaged;
+            failure = null;
+          } else {
+            try {
+              const res = await sample(prompt, { cache: false });
+              plan = parsePlan(res.text);
+              failure = plan ? null : { code: "invalid_json", message: "답에서 JSON을 찾지 못함" };
+            } catch (err2) {
+              failure = err2 as SampleErr;
+            }
+          }
+        }
+      }
+      if (!plan) {
+        const code = failure?.code ?? "upstream_error";
         const why =
-          code === "not_granted" ? "Claude 사용이 허용되지 않았어요 — 페이지의 권한 메뉴에서 허용해 주세요"
-          : code === "rate_limited" ? "요청이 잠시 많아요 — 조금 뒤에 다시 말씀해 주세요"
+          code === "not_granted" ? "Claude 사용이 허용되지 않았어요 — 오피스 화면의 권한 메뉴에서 Claude 사용을 허용해 주세요"
+          : code === "sampling_disabled" ? "이 계정에서는 페이지 안 Claude 사용이 꺼져 있어요"
+          : code === "rate_limited" ? "요청이 잠시 많거나 사용 한도에 걸렸어요 — 조금 뒤에 다시 보내 주세요"
           : code === "session_expired" ? "다시 로그인해 주세요"
-          : code === "invalid_json" ? "답을 정리하다 꼬였어요 — 한 번만 다시 말씀해 주세요"
-          : `연결 문제가 생겼어요 (${code}) — 다시 말씀해 주세요`;
-        push("sec", `⚠️ ${why}. 이번 말씀은 아무것도 저장하지 않았어요.`);
+          : code === "invalid_json" ? "답을 정리하다 꼬였어요 — 다시 보내 주세요"
+          : `연결 문제가 생겼어요 (${code}${failure?.message ? `: ${String(failure.message).slice(0, 120)}` : ""})`;
+        push("sec", `⚠️ ${why}. 아무것도 저장하지 않았고, 쓰신 말은 입력칸에 그대로 돌려놨어요.`);
+        setDraft(text);
         return;
       }
 
