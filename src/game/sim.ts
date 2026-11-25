@@ -2,7 +2,7 @@
 // 직원 상태머신 + A* 이동 + 회의 엔진 + 하루 시나리오 스크립트
 
 import { findPath } from "./pathfinding";
-import { CEO, DEPT_BRIEF, DEPT_LEAD, SECRETARY_DEPT, SECRETARY_SEED, STAFF, type StaffSeed } from "./staff";
+import { CEO, DEPT_BRIEF, DEPT_LEAD, DEV_DEPT, DEV_SEED, SECRETARY_DEPT, SECRETARY_SEED, STAFF, type StaffSeed } from "./staff";
 import {
   APPROVAL,
   BRIEFING_DEPT,
@@ -24,6 +24,7 @@ import {
   LOUNGE_ROOM,
   MEETING_SEATS,
   SECRETARY_SEAT,
+  DEV_SEAT,
   doorApproach,
   roomOf,
   walkable,
@@ -267,7 +268,7 @@ export class Company {
     for (const seed of STAFF) {
       const pool = seats.get(seed.deptId);
       const home =
-        seed.deptId === SECRETARY_DEPT ? SECRETARY_SEAT : (pool?.shift() ?? { x: ENTRANCE.x, y: ENTRANCE.y - 2 });
+        seed.deptId === SECRETARY_DEPT ? SECRETARY_SEAT : seed.deptId === DEV_DEPT ? DEV_SEAT : (pool?.shift() ?? { x: ENTRANCE.x, y: ENTRANCE.y - 2 });
       this.spawn(seed, home, { x: ENTRANCE.x, y: ENTRANCE.y });
     }
     this.spawn(CEO, CEO_SEAT, CEO_SEAT);
@@ -285,6 +286,15 @@ export class Company {
       sec.status = "대기";
       sec.anim = "sit";
       sec.facing = "up";
+    }
+    // 개발팀장도 대표실 자리에서 시작
+    const dev = this.agentById.get(DEV_SEED.id);
+    if (dev) {
+      dev.x = DEV_SEAT.x;
+      dev.y = DEV_SEAT.y;
+      dev.status = "대기";
+      dev.anim = "sit";
+      dev.facing = "up";
     }
 
     for (const room of DEPT_ROOMS) {
@@ -397,7 +407,7 @@ export class Company {
   private *dayScript(): Generator<number | (() => boolean), void, void> {
     // ① 출근
     this.phaseIndex = PHASE.arrive;
-    const workers = this.agents.filter((a) => a.rank !== "ceo" && a.id !== SECRETARY_SEED.id);
+    const workers = this.agents.filter((a) => a.rank !== "ceo" && a.id !== SECRETARY_SEED.id && a.id !== DEV_SEED.id);
     this.pushLog("🚪", `${HH}:00 출근 시작! 팀원 ${workers.length}명 입장합니다.`, "yellow");
     this.lock(workers);
     for (const agent of workers) {
@@ -1145,7 +1155,7 @@ export class Company {
       if (words.some((word) => text.includes(word))) return deptId;
     }
     const staff = STAFF.find(
-      (s) => s.deptId !== SECRETARY_DEPT && (text.includes(s.name) || (s.callsign && text.includes(s.callsign))),
+      (s) => s.deptId !== SECRETARY_DEPT && s.deptId !== DEV_DEPT && (text.includes(s.name) || (s.callsign && text.includes(s.callsign))),
     );
     return staff?.deptId ?? null;
   }

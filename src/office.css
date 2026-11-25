@@ -701,3 +701,20 @@
 .live-rail > .sec-card { flex: 1 1 auto; display: flex; flex-direction: column; }
 .live-rail > .sec-card .sec-body { flex: 1 1 auto; grid-template-rows: 1fr auto auto; }
 .live-rail > .sec-card .sec-log { max-height: none; min-height: 200px; contain: size; overflow-y: auto; }
+/* 🛠️ 개발팀장 창 */
+.dev-card .win-bar {
+  background:
+    radial-gradient(circle, #ffe27a 0 2px, transparent 2.6px) 3px calc(100% - 1px) / 24px 6px repeat-x,
+    radial-gradient(circle, #8fe3a7 0 2px, transparent 2.6px) 15px calc(100% - 1px) / 24px 6px repeat-x,
+    linear-gradient(90deg, #2b1d17, #1e5b3a);
+}
+.dev-body { display: grid; gap: 8px; }
+.dev-intro { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink-soft); word-break: keep-all; }
+.dev-input { width: 100%; resize: vertical; min-height: 64px; padding: 9px 11px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; font-size: 12px; line-height: 1.5; }
+.dev-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dev-send { padding: 8px 12px; border: 2px solid var(--ink); border-radius: 10px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 900; cursor: pointer; }
+.dev-send:disabled { opacity: .5; cursor: default; }
+.dev-sent { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 120px; overflow-y: auto; }
+.dev-sent li { padding: 5px 8px; border: 1.5px solid var(--pink-line); border-radius: 8px; background: #fff; font-size: 11px; }
+.dev-sent small { display: block; color: var(--ink-faint); font-size: 10px; }
+.dev-sent span { word-break: keep-all; }

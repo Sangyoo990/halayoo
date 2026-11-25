@@ -170,6 +170,9 @@ export const MEETING_SEATS: Pt[] = [
 /** 대표 수행비서 자리 — 대표실 안, 문 왼쪽 */
 export const SECRETARY_DESK: Pt = { x: 3, y: 9 };
 export const SECRETARY_SEAT: Pt = { x: 4, y: 10 };
+/** 개발팀장 자리 — 수행비서 책상 바로 오른쪽 */
+export const DEV_DESK: Pt = { x: 6, y: 9 };
+export const DEV_SEAT: Pt = { x: 7, y: 10 };
 
 /** 대표 책상 앞 보고 위치 */
 export const CEO_REPORT_SPOT: Pt = { x: 11, y: 9 };
@@ -216,8 +219,9 @@ for (const room of DEPT_ROOMS) {
 }
 
 PROPS.push({ kind: "desk", x: SECRETARY_DESK.x, y: SECRETARY_DESK.y, w: 3, h: 1 });
+PROPS.push({ kind: "desk", x: DEV_DESK.x, y: DEV_DESK.y, w: 3, h: 1 });
 PROPS.push({ kind: "ceo-desk", x: 9, y: 6, w: 5, h: 2 });
-PROPS.push({ kind: "rug", x: 8, y: 9, w: 7, h: 3 });
+PROPS.push({ kind: "rug", x: 10, y: 9, w: 5, h: 3 });
 PROPS.push({ kind: "plant", x: 4, y: 4, w: 1, h: 1 });
 PROPS.push({ kind: "plant", x: 17, y: 4, w: 1, h: 1 });
 

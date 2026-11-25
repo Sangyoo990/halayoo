@@ -12,7 +12,7 @@ import {
   type PublishResult,
 } from "./game/report";
 import { Company, PHASES, type Agent, type DeptStatus, type Snapshot } from "./game/sim";
-import { CEO, DEPT_BRIEF, DEPT_LEAD, SECRETARY_SEED, STAFF } from "./game/staff";
+import { CEO, DEPT_BRIEF, DEPT_LEAD, DEV_SEED, SECRETARY_SEED, STAFF } from "./game/staff";
 import { DEPT_ROOMS } from "./game/world";
 import {
   APPROVAL,
@@ -32,6 +32,7 @@ import SchedulePanel from "./SchedulePanel";
 import NotionPanel from "./NotionPanel";
 import FilePanel from "./FilePanel";
 import SecretaryChat from "./SecretaryChat";
+import DevChat from "./DevChat";
 import { formatItem, todaySchedule } from "./game/schedule";
 
 const STAFF_COUNT = STAFF.length;
@@ -141,7 +142,10 @@ export default function Home() {
     window.setTimeout(() => setToast(""), 2400);
   }, []);
 
-  const onSelect = useCallback((agent: Agent) => setSelectedId(agent.id), []);
+  const onSelect = useCallback((agent: Agent) => {
+    setSelectedId(agent.id);
+    if (agent.id === DEV_SEED.id) document.getElementById("dev-chat")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
   // 연동 설정 여부를 서버에서 받아온다 (값이 아니라 설정 여부만)
   useEffect(() => {
@@ -454,7 +458,7 @@ function LiveView({
                 <div className="win-body roster-body">
                   <div className="roster-dept">
                     <p>
-                      <b>🏛️ 대표실 · 수행비서</b>
+                      <b>🏛️ 대표실 · 수행비서 · 개발팀장</b>
                     </p>
                     <div className="roster-chips">
                       <button
@@ -467,6 +471,17 @@ function LiveView({
                         <i style={{ background: SECRETARY_SEED.shirt, borderColor: SECRETARY_SEED.hair }} />
                         {SECRETARY_SEED.name}
                         <small>{engine.agentById.get(SECRETARY_SEED.id)?.status ?? "출근 전"}</small>
+                      </button>
+                      <button
+                        className={`roster-chip ${selectedId === DEV_SEED.id ? "on" : ""}`}
+                        onClick={() => {
+                          const agent = engine.agentById.get(DEV_SEED.id);
+                          if (agent) onSelect(agent);
+                        }}
+                      >
+                        <i style={{ background: DEV_SEED.shirt, borderColor: DEV_SEED.hair }} />
+                        {DEV_SEED.name}
+                        <small>개발</small>
                       </button>
                     </div>
                   </div>
@@ -560,6 +575,7 @@ function LiveView({
         <aside className="live-rail">
           <CeoConsole engine={engine} snap={snap} />
           <SecretaryChat secName={SECRETARY_SEED.name} />
+          <DevChat devName={DEV_SEED.name} />
           <SchedulePanel snap={snap} />
 
         </aside>

@@ -1,7 +1,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PHASE, type Agent, type Company, type DeptStatus, type Snapshot } from "./sim";
-import { DEPT_BRIEF, SECRETARY_DEPT } from "./staff";
+import { DEPT_BRIEF, DEV_DEPT, SECRETARY_DEPT } from "./staff";
 import {
   CEO_ROOM,
   ENTRANCE,
@@ -79,7 +79,7 @@ const AgentLayer = memo(function AgentLayer({
             {agent.name}
             {agent.rank === "lead" ? <em>팀장</em> : null}
             {agent.rank === "ceo" ? <em>대표</em> : null}
-            {agent.deptId === SECRETARY_DEPT ? <em>비서</em> : null}
+            {agent.deptId === SECRETARY_DEPT ? <em>비서</em> : agent.deptId === DEV_DEPT ? <em>개발</em> : null}
           </span>
         </div>
       ))}
