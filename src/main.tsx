@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./globals.css";
 import "./office.css";
+import "./christmas.css";
 import App from "./App";
 import { COMPANY } from "../company.config";
 

@@ -1,0 +1,164 @@
+/* 🎄 크리스마스 테마 (레드 + 그린) — 시즌이 끝나면 main.tsx 의 import 한 줄만 지우면 원래(화이트·네이비)로 돌아간다 */
+
+:root {
+  --pink: #c0392b;        /* 메인: 크리스마스 레드 */
+  --pink-deep: #1e5b3a;   /* 진한 상록 그린 */
+  --pink-bg: #fbf6ee;     /* 따뜻한 크림 */
+  --pink-line: #ecdcc6;
+  --ink: #2b1d17;         /* 초콜릿 브라운 잉크 */
+  --ink-soft: #6b5548;
+  --ink-faint: #a8958a;
+  --lav: #3f8a5c;         /* 보조 그린 */
+  --mint: #d8eedb;
+  --yellow: #f6dc8e;      /* 골드 */
+  --win: #fffdf9;
+  --shadow: 6px 6px 0 rgba(30, 91, 58, 0.28);
+  --xmas-red: #c0392b;
+  --xmas-red-deep: #8e1e1b;
+  --xmas-green: #1e5b3a;
+  --xmas-night: #0f2a1d;
+  --xmas-gold: #e8b923;
+}
+
+/* 배경: 크림 바탕 + 은은한 눈송이 점 */
+html, body { background-color: var(--pink-bg); }
+body {
+  background-image:
+    radial-gradient(rgba(192, 57, 43, .16) 1.3px, transparent 1.4px),
+    radial-gradient(rgba(30, 91, 58, .14) 1.3px, transparent 1.4px);
+  background-size: 26px 26px, 26px 26px;
+  background-position: 0 0, 13px 13px;
+}
+
+/* 내리는 눈 — 화면 위에 살짝, 클릭은 통과 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background-image:
+    radial-gradient(3px 3px at 20px 30px, rgba(255, 255, 255, .95), transparent),
+    radial-gradient(2px 2px at 80px 120px, rgba(255, 255, 255, .9), transparent),
+    radial-gradient(3px 3px at 150px 60px, rgba(255, 255, 255, .85), transparent),
+    radial-gradient(2px 2px at 210px 170px, rgba(255, 255, 255, .9), transparent),
+    radial-gradient(2.5px 2.5px at 260px 20px, rgba(255, 255, 255, .85), transparent);
+  background-size: 280px 220px;
+  filter: drop-shadow(0 0 1px rgba(43, 29, 23, .35));
+  opacity: .8;
+  animation: xmasSnow 14s linear infinite;
+}
+@keyframes xmasSnow {
+  from { background-position: 0 -220px; }
+  to { background-position: 40px 220px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; opacity: .5; }
+}
+
+::selection { background: var(--xmas-red); color: #fff; }
+button:focus-visible, a:focus-visible { outline-color: rgba(192, 57, 43, .45); }
+
+/* 창 제목줄: 레드→그린 + 꼬마전구 */
+.win-bar {
+  position: relative;
+  padding-bottom: 12px;
+  background:
+    radial-gradient(circle, #ffe27a 0 2px, transparent 2.6px) 3px calc(100% - 1px) / 24px 6px repeat-x,
+    radial-gradient(circle, #ff6b5e 0 2px, transparent 2.6px) 11px calc(100% - 1px) / 24px 6px repeat-x,
+    radial-gradient(circle, #8fe3a7 0 2px, transparent 2.6px) 19px calc(100% - 1px) / 24px 6px repeat-x,
+    linear-gradient(90deg, var(--xmas-red), var(--xmas-red-deep) 55%, var(--xmas-green));
+  text-shadow: 0 1px rgba(0, 0, 0, .25);
+}
+.console-card .win-bar {
+  background:
+    radial-gradient(circle, #ffe27a 0 2px, transparent 2.6px) 3px calc(100% - 1px) / 24px 6px repeat-x,
+    radial-gradient(circle, #ff6b5e 0 2px, transparent 2.6px) 11px calc(100% - 1px) / 24px 6px repeat-x,
+    linear-gradient(90deg, var(--xmas-night), var(--xmas-green));
+}
+.sec-card .win-bar, .file-card .win-bar {
+  background:
+    radial-gradient(circle, #ffe27a 0 2px, transparent 2.6px) 3px calc(100% - 1px) / 24px 6px repeat-x,
+    radial-gradient(circle, #8fe3a7 0 2px, transparent 2.6px) 15px calc(100% - 1px) / 24px 6px repeat-x,
+    linear-gradient(90deg, var(--xmas-green), var(--xmas-red));
+}
+.win { border-color: var(--ink); }
+
+/* 머리말 */
+.live-hero .eyebrow::before, .hero .eyebrow::before { content: "🎄 MERRY CHRISTMAS · "; color: var(--xmas-red); }
+.highlight { background: linear-gradient(transparent 60%, rgba(232, 185, 35, .55) 60%); }
+.live-clock { background: var(--xmas-night); color: #fbf6ee; box-shadow: 4px 4px 0 rgba(142, 30, 27, .4); }
+.live-clock span { color: #ffb4a8; }
+
+/* 어두운 패널 (네이비 → 상록 그린) */
+.world-frame { background: var(--xmas-night); }
+.world-viewport {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(192, 57, 43, .22), transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(63, 138, 92, .25), transparent 55%),
+    var(--xmas-night);
+}
+.pr-screen { background: var(--xmas-night); }
+
+/* 사무실 바닥: 눈 덮인 바닥 */
+.world-floor {
+  background-color: #eef1ea;
+  box-shadow: inset 0 0 90px rgba(30, 91, 58, .22);
+}
+
+/* 방 색 — 크림·연그린·연레드 */
+.rm { background: #fffdf8; }
+.rm-ceo { background: #fdf0ec; }
+.rm-meeting { background: #f3f7ef; }
+.rm-lounge { background: #eef7ef; }
+.rm.working { background: #fff8e8; }
+.rm.done { background: #edf8ef; }
+.rm.approval { background: #fdf0ec; }
+.rm.blocked { background: #f5f1ec; }
+
+/* 가구 */
+.pr-ceo-desk { background: linear-gradient(#e7c9a6, #b98a5e); }
+.pr-sofa { background: linear-gradient(#d95b4c, #a8342a); }
+.pr-cabinet { background: #f1e6d6; }
+.pr-coffee { background: #f3e9dc; }
+.pr-rug { background: repeating-linear-gradient(45deg, #f4d6d0 0 8px, #d5e9d8 8px 16px); }
+/* 화분 → 꼬마 트리 (전구 장식) */
+.pr-plant {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 62% 22%, 56% 22%, 74% 50%, 66% 50%, 92% 86%, 56% 86%, 56% 100%, 44% 100%, 44% 86%, 8% 86%, 34% 50%, 26% 50%, 44% 22%, 38% 22%);
+  background:
+    radial-gradient(circle at 46% 40%, #ff5a4c 0 6%, transparent 7%),
+    radial-gradient(circle at 60% 62%, #ffe27a 0 6%, transparent 7%),
+    radial-gradient(circle at 36% 72%, #ffe27a 0 6%, transparent 7%),
+    radial-gradient(circle at 70% 78%, #ff5a4c 0 6%, transparent 7%),
+    linear-gradient(#2f8f55, #1e5b3a 86%, #7a4a2a 86%);
+  box-shadow: none;
+}
+
+/* 직원들 산타 모자 */
+.p-hair::before {
+  content: "";
+  position: absolute;
+  left: -1.5px;
+  bottom: 3px;
+  width: 15px;
+  height: 10px;
+  background:
+    radial-gradient(circle at 92% 14%, #fff 0 18%, transparent 20%),
+    linear-gradient(to top, #fff 0 3px, #d33a2c 3px);
+  clip-path: polygon(0 100%, 100% 100%, 86% 36%, 100% 22%, 92% 0, 78% 8%, 60% 6%);
+  pointer-events: none;
+}
+.f-up .p-hair::before { bottom: 6px; }
+
+/* 채팅·카드 */
+.console-log { background: #fbf6ee; }
+.console-line.ceo { background: var(--xmas-red); }
+.console-line.ceo b, .console-line.ceo small { color: #fff4ef; }
+.console-input button { background: var(--xmas-green); }
+.console-quick button:hover, .file-drop:hover { background: var(--xmas-red); color: #fff; }
+.lc.working { background: var(--xmas-red); }
+.approval-body.pending { background: linear-gradient(#fffdf9, #fbeee9); }
+.feed-list li.lav { background: #f1f7f0; }
+.speed-group button.skip { background: #fbf6ee; }
+.sec-upcoming li em { background: var(--yellow); }
