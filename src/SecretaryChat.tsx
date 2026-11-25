@@ -146,6 +146,7 @@ export default function SecretaryChat({ secName }: { secName: string }) {
 - "삭제/지워/없애"는 delete에 그 id. "취소됐어"도 delete (대표가 기록을 남기라고 하면 update status "취소").
 - 애매하면 add/update 하지 말고 reply로 짧게 물어봐. 확실한 건 바로 처리.
 ## 지시 규칙
+- 게임 시나리오 작업은 연구소모임팀(서혜원 전담)으로.
 - 대표가 팀에게 조사·자료·보고를 시키면 order = {"team": 취업준비팀/일반지원팀/국제동향보고서팀/연구소모임팀 중 하나, "text": 지시 내용 한두 문장}. 아니면 order = null.
 ## 답장
 - reply: 존댓말, 비서답게 간결하게(보통 1~4문장, 필요하면 더 길게). 처리한 내용은 앱이 따로 덧붙이니 반복 나열하지 말고 핵심만.
