@@ -676,3 +676,9 @@
 .sec-upcoming li span:nth-child(2) { font-family: "Archivo", sans-serif; color: var(--ink-soft); }
 .sec-upcoming li a { color: var(--ink); font-weight: 800; word-break: keep-all; }
 .sec-upcoming li em { font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 99px; background: var(--yellow); border: 1px solid var(--ink); }
+/* 사무실 하단: 라이브 피드 + 직원 명단 (가로 배치) */
+.live-main { display: grid; gap: 14px; min-width: 0; }
+.live-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.live-bottom .feed-body { max-height: 360px; }
+.live-bottom .roster-body { max-height: 420px; overflow-y: auto; }
+@media (max-width: 760px) { .live-bottom { grid-template-columns: 1fr; } }

@@ -419,13 +419,89 @@ function LiveView({
       </section>
 
       <section className="live-grid">
-        <OfficeWorld engine={engine} snap={snap} selectedId={selectedId} follow={follow} onSelect={onSelect} />
+        <div className="live-main">
+          <OfficeWorld engine={engine} snap={snap} selectedId={selectedId} follow={follow} onSelect={onSelect} />
+          <div className="live-bottom">
+            <section className="win rail-card feed-card">
+              <div className="win-bar">
+                <span>📡 live.feed</span>
+                <span className="window-controls">—　▢　✕</span>
+              </div>
+              <div className="win-body feed-body">
+                {snap.meetingTitle ? <div className="feed-now">💬 회의 진행 중 — {snap.meetingTitle}</div> : null}
+                <ul className="feed-list">
+                  {snap.log.map((entry) => (
+                    <li key={entry.id} className={entry.tone}>
+                      <b>{entry.time}</b>
+                      <i>{entry.icon}</i>
+                      <span>{entry.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+
+            <section className="win rail-card">
+              <div className="win-bar">
+                <span>👥 staff.roster</span>
+                <span className="window-controls">—　▢　✕</span>
+              </div>
+              <div className="win-body roster-body">
+                <div className="roster-dept">
+                  <p>
+                    <b>🏛️ 대표실 · 수행비서</b>
+                  </p>
+                  <div className="roster-chips">
+                    <button
+                      className={`roster-chip ${selectedId === SECRETARY_SEED.id ? "on" : ""}`}
+                      onClick={() => {
+                        const agent = engine.agentById.get(SECRETARY_SEED.id);
+                        if (agent) onSelect(agent);
+                      }}
+                    >
+                      <i style={{ background: SECRETARY_SEED.shirt, borderColor: SECRETARY_SEED.hair }} />
+                      {SECRETARY_SEED.name}
+                      <small>{engine.agentById.get(SECRETARY_SEED.id)?.status ?? "출근 전"}</small>
+                    </button>
+                  </div>
+                </div>
+                {DEPT_ROOMS.map((room) => (
+                  <div className="roster-dept" key={room.id}>
+                    <p>
+                      <b>
+                        {room.icon} {room.name}
+                        {DEPT_BRIEF[room.id]?.priority ? <em className="priority-badge">최우선</em> : null}
+                      </b>
+                      <i className={`rm-dot ${statusClass[snap.deptStatus[room.id] ?? "대기"]}`} />
+                    </p>
+                    <div className="roster-chips">
+                      {STAFF.filter((s) => s.deptId === room.id).map((seed) => {
+                        const agent = engine.agentById.get(seed.id);
+                        return (
+                          <button
+                            key={seed.id}
+                            className={`roster-chip ${selectedId === seed.id ? "on" : ""}`}
+                            onClick={() => agent && onSelect(agent)}
+                          >
+                            <i style={{ background: seed.shirt, borderColor: seed.hair }} />
+                            {seed.name}
+                            <small>{agent?.status ?? "출근 전"}</small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
 
         <aside className="live-rail">
           <CeoConsole engine={engine} snap={snap} />
           <SecretaryChat secName={SECRETARY_SEED.name} />
-          <FilePanel engine={engine} />
           <SchedulePanel snap={snap} />
+          <FilePanel engine={engine} />
           <NotionPanel compact />
 
           <section className="win rail-card" id="ceo-approval">
@@ -482,78 +558,6 @@ function LiveView({
             </div>
           </section>
 
-          <section className="win rail-card feed-card">
-            <div className="win-bar">
-              <span>📡 live.feed</span>
-              <span className="window-controls">—　▢　✕</span>
-            </div>
-            <div className="win-body feed-body">
-              {snap.meetingTitle ? <div className="feed-now">💬 회의 진행 중 — {snap.meetingTitle}</div> : null}
-              <ul className="feed-list">
-                {snap.log.map((entry) => (
-                  <li key={entry.id} className={entry.tone}>
-                    <b>{entry.time}</b>
-                    <i>{entry.icon}</i>
-                    <span>{entry.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          <section className="win rail-card">
-            <div className="win-bar">
-              <span>👥 staff.roster</span>
-              <span className="window-controls">—　▢　✕</span>
-            </div>
-            <div className="win-body roster-body">
-              <div className="roster-dept">
-                <p>
-                  <b>🏛️ 대표실 · 수행비서</b>
-                </p>
-                <div className="roster-chips">
-                  <button
-                    className={`roster-chip ${selectedId === SECRETARY_SEED.id ? "on" : ""}`}
-                    onClick={() => {
-                      const agent = engine.agentById.get(SECRETARY_SEED.id);
-                      if (agent) onSelect(agent);
-                    }}
-                  >
-                    <i style={{ background: SECRETARY_SEED.shirt, borderColor: SECRETARY_SEED.hair }} />
-                    {SECRETARY_SEED.name}
-                    <small>{engine.agentById.get(SECRETARY_SEED.id)?.status ?? "출근 전"}</small>
-                  </button>
-                </div>
-              </div>
-              {DEPT_ROOMS.map((room) => (
-                <div className="roster-dept" key={room.id}>
-                  <p>
-                    <b>
-                      {room.icon} {room.name}
-                      {DEPT_BRIEF[room.id]?.priority ? <em className="priority-badge">최우선</em> : null}
-                    </b>
-                    <i className={`rm-dot ${statusClass[snap.deptStatus[room.id] ?? "대기"]}`} />
-                  </p>
-                  <div className="roster-chips">
-                    {STAFF.filter((s) => s.deptId === room.id).map((seed) => {
-                      const agent = engine.agentById.get(seed.id);
-                      return (
-                        <button
-                          key={seed.id}
-                          className={`roster-chip ${selectedId === seed.id ? "on" : ""}`}
-                          onClick={() => agent && onSelect(agent)}
-                        >
-                          <i style={{ background: seed.shirt, borderColor: seed.hair }} />
-                          {seed.name}
-                          <small>{agent?.status ?? "출근 전"}</small>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         </aside>
       </section>
     </>
