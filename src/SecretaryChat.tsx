@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createEvents, loadEvents, updateEvent, type EventInput, type RemoteEvent } from "./game/report";
+import { createEvents, deleteEvents, loadEvents, submitOrder, updateEvent, type EventInput, type RemoteEvent } from "./game/report";
 import { setRemoteSchedule } from "./game/schedule";
 
 /* 💬 비서 채팅창 — 대표가 편하게 말하면 비서(Claude)가 일정을 골라 📅 대표 일정(Notion)에 저장한다.
@@ -7,14 +7,17 @@ import { setRemoteSchedule } from "./game/schedule";
 
 type Use = (n: string) => Promise<unknown>;
 type SampleFn = {
-  json: <T>(input: string, opts?: { modelTier?: "quick" | "default" | "complex"; cache?: false }) => Promise<T>;
+  json: <T>(input: string, opts?: { cache?: false }) => Promise<T>;
 };
 type Line = { id: string; from: "me" | "sec"; text: string; time: string };
 type Plan = {
   reply?: string;
   add?: { title?: string; date?: string; time?: string; place?: string; memo?: string; needsCheck?: boolean }[];
-  update?: { ref?: number; title?: string; date?: string; time?: string; place?: string; memo?: string; status?: string }[];
+  update?: { id?: string; title?: string; date?: string; time?: string; place?: string; memo?: string; status?: string }[];
+  delete?: string[];
+  order?: { team?: string; text?: string } | null;
 };
+const TEAMS = ["취업준비팀", "일반지원팀", "국제동향보고서팀", "연구소모임팀"];
 
 const KEY = "team-sangyu:secretary-chat";
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -60,46 +63,6 @@ function writeLines(lines: Line[]) {
 
 const okDate = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const okTime = (s?: string) => !s || /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
-
-/** Claude를 못 쓸 때의 간단한 해석: 오늘/내일/모레/○요일/M월 D일/M/D + HH:MM·오후 N시 */
-function simpleParse(text: string, today: string, wd: number): EventInput[] {
-  const out: EventInput[] = [];
-  for (const part of text.split(/[,，]|\s그리고\s|있고|이고|\n/).map((s) => s.trim()).filter(Boolean)) {
-    let date = "";
-    let m: RegExpMatchArray | null;
-    if (/오늘/.test(part)) date = today;
-    else if (/내일/.test(part)) date = addDays(today, 1);
-    else if (/모레/.test(part)) date = addDays(today, 2);
-    else if ((m = part.match(/(\d{1,2})\s*(?:월|\/)\s*(\d{1,2})\s*일?/))) {
-      const y = Number(today.slice(0, 4));
-      let cand = `${y}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
-      if (cand < today) cand = `${y + 1}${cand.slice(4)}`;
-      date = cand;
-    } else if ((m = part.match(/(다음\s*주\s*)?([일월화수목금토])요일/))) {
-      const target = DAYS.indexOf(m[2]);
-      if (m[1]) {
-        const toNextMon = (8 - wd) % 7 || 7;
-        date = addDays(today, toNextMon + (target === 0 ? 6 : target - 1));
-      } else date = addDays(today, (target - wd + 7) % 7);
-    }
-    if (!date) continue;
-    let time = "";
-    if ((m = part.match(/(\d{1,2}):(\d{2})/))) time = `${m[1].padStart(2, "0")}:${m[2]}`;
-    else if ((m = part.match(/(오전|오후|저녁|밤)?\s*(\d{1,2})시\s*(반|(\d{1,2})분)?/))) {
-      let h = Number(m[2]);
-      if (m[1] && m[1] !== "오전" && h < 12) h += 12;
-      const min = m[3] === "반" ? "30" : (m[4] ?? "00").padStart(2, "0");
-      time = `${String(h).padStart(2, "0")}:${min}`;
-    }
-    const title = part
-      .replace(/(다음\s*주\s*)?(오늘|내일|모레|[일월화수목금토]요일|\d{1,2}\s*(월|\/)\s*\d{1,2}\s*일?)/g, "")
-      .replace(/(오전|오후)?\s*\d{1,2}(:\d{2}|시\s*(반|\d{1,2}분)?)\s*(에|부터)?/g, "")
-      .replace(/(있어|있음|있다|잡혀\s*있어|예정이야|예정)\.?$/g, "")
-      .trim();
-    if (title) out.push({ title, date, time, raw: part, status: "예정" });
-  }
-  return out;
-}
 
 export default function SecretaryChat({ secName }: { secName: string }) {
   const [lines, setLines] = useState<Line[]>(readLines);
@@ -153,81 +116,101 @@ export default function SecretaryChat({ secName }: { secName: string }) {
     const text = draft.trim();
     if (!text || busy) return;
     setDraft("");
+    const history = lines.slice(-16);
     push("me", text);
     setBusy(true);
     try {
+      if (!sample) {
+        push("sec", "⚠️ 지금은 비서(Claude)와 연결이 안 돼요. claude.ai에서 이 오피스를 열고, Claude 사용 허용을 물어보면 허용해 주세요. 그 전엔 일정을 함부로 저장하지 않을게요.");
+        return;
+      }
       const now = seoulParts();
       const list = await refresh();
-      const upcoming = list.filter((e) => e.date >= addDays(now.date, -1) && e.status !== "취소");
+      const upcoming = list.filter((e) => e.date >= addDays(now.date, -7) && e.status !== "취소");
+      const ids = new Map(upcoming.map((e, i) => [`E${i + 1}`, e]));
+      const context = upcoming
+        .map((e, i) => `E${i + 1} | ${e.date}(${DAYS[new Date(`${e.date}T00:00:00Z`).getUTCDay()]}) | ${e.time || "시간 미정"} | ${e.title}${e.place ? ` | 장소 ${e.place}` : ""} | 상태 ${e.status}${e.memo ? ` | 메모 ${e.memo}` : ""}`)
+        .join("\n");
+      const transcript = history.map((l) => `${l.from === "me" ? "대표" : secName}: ${l.text}`).join("\n");
+      const prompt = [
+        `너는 "team 상유"의 대표 이상유(행정안전부 국제협력담당관실 청년인턴, 연구소모임 4조 조장, 공기업·대기업 문과 직무 취업 준비 중)를 모시는 수행비서 ${secName}이야.`,
+        `대표와 평소처럼 대화해: 질문에 답하고, 상의에 의견을 주고, 문장 다듬기·아이디어·간단한 정리도 도와. 일정 얘기가 나오면 일정 DB를 관리하고, 팀에 맡길 조사·자료 작업이면 지시함에 올려. 모르는 사실·최신 정보는 지어내지 말고 "확인이 필요해요"라고 하거나 팀에 조사 지시를 올리자고 제안해.`,
+        `지금: ${now.date} (${DAYS[now.wd]}요일) ${now.time}, 한국 시간.`,
+        `## 저장된 일정 (id | 날짜 | 시간 | 일정 | ...)\n${context || "(없음)"}`,
+        `## 최근 대화\n${transcript || "(없음)"}`,
+        `## 대표의 새 말\n${text}`,
+        `## 일정 규칙
+- "내일"=+1일, "모레"=+2일, "○요일"=오늘 포함 가장 가까운 그 요일, "다음주 ○요일"=다음 주(월요일 시작), "M/D"=올해(지났으면 내년). 시간은 24시간 HH:MM. "전일·종일·하루 종일"이면 time "" 이고 memo에 "종일".
+- 새 일정만 add. 이미 있는 일정을 말하면 add 하지 말고 update(id).
+- 대표가 "맞아/응/그래"처럼 확인해 주면, 최근 대화에서 비서가 물어본 그 일정을 update: status "예정", memo는 확인된 내용으로 고쳐 써 (예: "저녁 맞음 · 시간 미정").
+- "삭제/지워/없애"는 delete에 그 id. "취소됐어"도 delete (대표가 기록을 남기라고 하면 update status "취소").
+- 애매하면 add/update 하지 말고 reply로 짧게 물어봐. 확실한 건 바로 처리.
+## 지시 규칙
+- 대표가 팀에게 조사·자료·보고를 시키면 order = {"team": 취업준비팀/일반지원팀/국제동향보고서팀/연구소모임팀 중 하나, "text": 지시 내용 한두 문장}. 아니면 order = null.
+## 답장
+- reply: 존댓말, 비서답게 간결하게(보통 1~4문장, 필요하면 더 길게). 처리한 내용은 앱이 따로 덧붙이니 반복 나열하지 말고 핵심만.
+JSON 하나로만 답해:
+{"reply":"...","add":[{"title":"","date":"YYYY-MM-DD","time":"","place":"","memo":"","needsCheck":false}],"update":[{"id":"E1","title":"","date":"","time":"","place":"","memo":"","status":""}],"delete":["E2"],"order":null}
+update에는 바꿀 필드만 넣어 (안 바꾸는 필드는 빼).`,
+      ].join("\n\n");
+
       let plan: Plan;
-      if (sample) {
-        const context = upcoming
-          .map((e, i) => `${i}. ${e.date}(${DAYS[new Date(`${e.date}T00:00:00Z`).getUTCDay()]}) ${e.time || "시간 미정"} ${e.title}${e.place ? ` @${e.place}` : ""} [${e.status}]${e.memo ? ` 메모: ${e.memo}` : ""}`)
-          .join("\n");
-        const prompt = [
-          `너는 대표 이상유의 수행비서 ${secName}이야. 대표가 비서 채팅창에 보낸 말을 읽고 일정을 저장·수정해.`,
-          `지금: ${now.date} (${DAYS[now.wd]}요일) ${now.time}, 한국 시간.`,
-          `날짜 규칙: "내일"=+1일, "모레"=+2일, "○요일"=오늘 포함 가장 가까운 그 요일, "다음주 ○요일"=다음 주(월요일 시작) 그 요일, "M/D"·"M월 D일"=올해(이미 지났으면 내년). 시간은 24시간 HH:MM, "오후 3시 반"=15:30. 시간이 없으면 "".`,
-          `애매하면 지어내지 말고 needsCheck=true와 memo에 무엇이 애매한지 적어 (예: "저녁 오찬" → 오찬은 보통 점심이라 확인 필요, 시간 없음).`,
-          `이미 저장된 일정 (번호. 날짜 시간 일정 [상태]):\n${context || "(없음)"}`,
-          `이미 있는 일정과 같은 건 새로 넣지 말고, 대표가 시간·장소를 알려주거나 확인해 주면 update로 그 번호(ref)를 고쳐 (확인되면 status "예정"). 취소한다고 하면 status "취소".`,
-          `일정이 아닌 말(질문·잡담)은 add/update 없이 reply로만 짧게 답해. "이번 주 일정 뭐야" 같은 질문은 위 목록으로 답해.`,
-          `reply는 존댓말 1~3문장, 저장·수정한 내용과 확인이 필요한 것(질문 1개)을 말해.`,
-          `JSON만 답해: {"reply":"...","add":[{"title":"","date":"YYYY-MM-DD","time":"HH:MM 또는 빈 문자열","place":"","memo":"","needsCheck":false}],"update":[{"ref":0,"title":"(바꿀 때만)","date":"","time":"","place":"","memo":"","status":""}]}`,
-          `대표의 말:\n${text}`,
-        ].join("\n\n");
-        try {
-          plan = await sample.json<Plan>(prompt, { modelTier: "default", cache: false });
-        } catch (err) {
-          const code = (err as { code?: string })?.code;
-          if (code === "rate_limited") {
-            push("sec", "잠시 요청이 많아요. 조금 뒤에 다시 말씀해 주세요.");
-            return;
-          }
-          const add = simpleParse(text, now.date, now.wd);
-          plan = { reply: add.length ? "" : "말씀을 일정으로 읽지 못했어요. 날짜(내일·금요일·12/3)와 시간을 같이 말씀해 주세요.", add };
-        }
-      } else {
-        const add = simpleParse(text, now.date, now.wd);
-        plan = { reply: add.length ? "" : "날짜를 못 읽었어요. 예: \"내일 12:00 오찬\", \"금요일 15:30 인터뷰 촬영\"", add };
+      try {
+        plan = await sample.json<Plan>(prompt, { cache: false });
+      } catch (err) {
+        const code = (err as { code?: string })?.code ?? "upstream_error";
+        const why =
+          code === "not_granted" ? "Claude 사용이 허용되지 않았어요 — 페이지의 권한 메뉴에서 허용해 주세요"
+          : code === "rate_limited" ? "요청이 잠시 많아요 — 조금 뒤에 다시 말씀해 주세요"
+          : code === "session_expired" ? "다시 로그인해 주세요"
+          : code === "invalid_json" ? "답을 정리하다 꼬였어요 — 한 번만 다시 말씀해 주세요"
+          : `연결 문제가 생겼어요 (${code}) — 다시 말씀해 주세요`;
+        push("sec", `⚠️ ${why}. 이번 말씀은 아무것도 저장하지 않았어요.`);
+        return;
       }
 
+      const done: string[] = [];
+      const problems: string[] = [];
       const adds: EventInput[] = (plan.add ?? [])
         .filter((a) => a && a.title && okDate(a.date) && okTime(a.time))
         .map((a) => ({
           title: String(a.title), date: String(a.date), time: a.time ?? "", place: a.place ?? "", memo: a.memo ?? "",
           status: a.needsCheck ? "확인 필요" : "예정", raw: text,
         }));
-      const done: string[] = [];
-      const problems: string[] = [];
       if (adds.length) {
         const r = await createEvents(adds);
-        if (r.ok) adds.forEach((a) => done.push(`📅 ${md(a.date)} ${a.time || "시간 미정"} ${a.title}${a.status === "확인 필요" ? " (확인 필요)" : ""}`));
+        if (r.ok) adds.forEach((a) => done.push(`📅 추가 · ${md(a.date)} ${a.time || "시간 미정"} ${a.title}${a.status === "확인 필요" ? " (확인 필요)" : ""}`));
         else problems.push(r.detail ?? "저장 실패");
       }
       for (const u of plan.update ?? []) {
-        const target = typeof u.ref === "number" ? upcoming[u.ref] : undefined;
+        const target = u?.id ? ids.get(u.id) : undefined;
         if (!target) continue;
         const change: Partial<EventInput> = {};
-        if (u.title) change.title = u.title;
+        if (typeof u.title === "string" && u.title.trim()) change.title = u.title.trim();
         if (okDate(u.date)) change.date = u.date;
-        if (u.time !== undefined && u.time !== "" && okTime(u.time)) change.time = u.time;
-        if (u.place) change.place = u.place;
-        if (u.memo !== undefined && u.memo !== "") change.memo = u.memo;
+        if (typeof u.time === "string" && okTime(u.time) && "time" in u) change.time = u.time;
+        if (typeof u.place === "string" && "place" in u) change.place = u.place;
+        if (typeof u.memo === "string" && "memo" in u) change.memo = u.memo;
         if (u.status && STATUSES.includes(u.status)) change.status = u.status;
         if (!Object.keys(change).length) continue;
         const r = await updateEvent(target.url, change);
-        if (r.ok) done.push(`✏️ ${md(change.date ?? target.date)} ${change.time ?? (target.time || "시간 미정")} ${change.title ?? target.title}${change.status ? ` → ${change.status}` : ""}`);
+        if (r.ok) done.push(`✏️ 수정 · ${md(change.date ?? target.date)} ${(change.time ?? target.time) || "시간 미정"} ${change.title ?? target.title}${change.status ? ` → ${change.status}` : ""}`);
         else problems.push(r.detail ?? "수정 실패");
       }
-      const msg = [plan.reply?.trim(), done.length ? done.join("\n") : "", problems.length ? `⚠️ ${problems.join(" · ")}` : ""]
-        .filter(Boolean)
-        .join("\n");
-      push("sec", msg || "알겠습니다.");
-      if (done.length) {
-        await refresh();
-        push("sec", "🔔 당일 아침 07:51에 아이폰으로, 전날 저녁 마감 요약에서 미리 알려드릴게요.");
+      const dels = (plan.delete ?? []).map((id) => ids.get(id)).filter((e): e is RemoteEvent => !!e);
+      if (dels.length) {
+        const r = await deleteEvents(dels.map((e) => e.url));
+        if (r.ok) dels.forEach((e) => done.push(`🗑️ 삭제 · ${md(e.date)} ${e.time || "시간 미정"} ${e.title}`));
+        else problems.push(r.detail ?? "삭제 실패");
       }
+      if (plan.order && plan.order.text && TEAMS.includes(plan.order.team ?? "")) {
+        const r = await submitOrder(plan.order.text, plan.order.team!);
+        if (r.ok) done.push(`📮 ${plan.order.team}에 지시 등록 — 다음 업무 시간(08:41 / 17:27)에 처리`);
+        else problems.push(r.detail);
+      }
+      const msg = [plan.reply?.trim(), done.join("\n"), problems.length ? `⚠️ ${problems.join(" · ")}` : ""].filter(Boolean).join("\n");
+      push("sec", msg || "네, 알겠습니다.");
+      if (adds.length || dels.length || (plan.update ?? []).length) await refresh();
     } finally {
       setBusy(false);
     }
@@ -247,7 +230,7 @@ export default function SecretaryChat({ secName }: { secName: string }) {
           {lines.length === 0 ? (
             <div className="console-line staff">
               <b>{secName}</b>
-              <p>{"일정은 편하게 말씀만 주세요. 제가 저장해 두고 당일 아침에 알려드릴게요.\n예: 내일 12시 오찬 있고, 금요일 15:30에 인터뷰 촬영 있어"}</p>
+              <p>{`대표님, ${secName}입니다. 편하게 말씀 주세요.\n· 일정: \"금요일 15:30 인터뷰 촬영 있어\" → 저장하고 당일 아침에 알려드려요. 고치기·삭제도 말로 하시면 돼요.\n· 상의·질문·문장 다듬기도 같이 해드려요.\n· \"취업팀에 ○○ 조사시켜\" → 지시함에 올려요.`}</p>
             </div>
           ) : null}
           {lines.map((l) => (
@@ -275,7 +258,7 @@ export default function SecretaryChat({ secName }: { secName: string }) {
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="예: 금요일 15:30 인터뷰 촬영 있어"
+            placeholder="유지민에게 말하기 (일정·질문·지시 무엇이든)"
             aria-label="비서에게 보내기"
             disabled={busy}
           />

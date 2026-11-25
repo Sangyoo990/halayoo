@@ -476,3 +476,17 @@ export async function updateEvent(url: string, change: Partial<EventInput>): Pro
     return { ok: false, detail: mcpDetail(err, "일정 수정") };
   }
 }
+
+/** 대표가 비서 채팅창에서 "삭제해"라고 한 일정만 Notion 휴지통으로 (복구 가능) */
+export async function deleteEvents(urls: string[]): Promise<{ ok: boolean; detail?: string }> {
+  if (!urls.length) return { ok: true };
+  const mcp = await getMcp();
+  if (!mcp) return { ok: false, detail: "claude.ai에서 열었을 때만 일정을 지워요" };
+  const ids = urls.map((u) => u.match(/[0-9a-f]{32}/i)?.[0]).filter((x): x is string => !!x);
+  try {
+    await mcp.callTool(SERVER, "notion-delete-pages", { page_ids: ids, user_confirmed: true }, { cache: false });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, detail: mcpDetail(err, "일정 삭제") };
+  }
+}
