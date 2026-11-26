@@ -1142,9 +1142,9 @@ export class Company {
     if (/지금 뭐해|뭐 해|어디야|상태/.test(text)) return null;
     if (/^(집중|자유|쉬어|자리로|복귀|착석|빨리|서둘|회의|모여|소집|브리핑|승인|오케이|고고)/.test(text)) return null;
     const isOrder =
-      /회의록|자료|검색|찾아|알아봐|조사|추천|정리해|분석|수집|작성|올려|보고해|해와|해줘|해라|하도록|시켜|지시|부탁|준비해|시나리오|만들어|제작/.test(text);
+      /회의록|자료|검색|찾아|알아봐|조사|추천|정리해|분석|수집|작성|올려|보고해|해와|해줘|해라|하도록|시켜|지시|부탁|준비해|시나리오|만들어|제작|번역/.test(text);
     if (!isOrder) return null;
-    const deptId = /회의록|시나리오/.test(text) ? "lab" : this.matchDept(text) ?? BRIEFING_DEPT;
+    const deptId = /회의록|시나리오/.test(text) ? "lab" : /번역|외신|해외 원문|해외 소스/.test(text) ? "global" : this.matchDept(text) ?? BRIEFING_DEPT;
     const NAMES: Record<string, string> = { career: "취업준비팀", support: "일반지원팀", global: "국제동향보고서팀", lab: "연구소모임팀" };
     return NAMES[deptId] ?? "일반지원팀";
   }

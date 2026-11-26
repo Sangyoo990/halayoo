@@ -364,6 +364,10 @@ export const STAFF_LIST: StaffEntry[] = [
     task: onDay({ 5: "대표 확인용 주간 국제 뉴스 정리 (17:00)" }, "이번 주 국제 이슈 모으기"),
     colors: ["#7a453c", "#b8c7e3", "#1e3a6e"],
     thoughts: ["보고서용 아니고 대표님 확인용이니까 가볍게.", "분야 상관없이 이슈된 것 위주로."] },
+  { dept: "global", rank: "member", name: "고채림", role: "🌐 해외 소스 번역·추천 전담",
+    task: `${REGION} 현지 언론·정부 발표 원문 → 한국어 번역·추천 (매일 2건)`,
+    colors: ["#3a2a2a", "#d8eedb", "#8e1e1b"],
+    thoughts: ["원문은 그 나라 언론·정부 발표에서 직접.", "번역은 정확하게, 고유명사는 원어 병기.", "한국과 어떻게 연결되는지 한 줄 꼭."] },
 
   // ④ 연구소모임팀 (팀장 1 + 팀원 3)
   { dept: "lab", rank: "lead", name: "윤서연", gender: "f", role: "연구소모임 팀장",
