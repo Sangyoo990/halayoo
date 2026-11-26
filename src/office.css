@@ -729,3 +729,8 @@
 .console-target button small { font-size: 9px; font-weight: 700; color: var(--ink-faint); }
 .console-target button.on { background: var(--pink-deep); color: #fff; }
 .console-target button.on small { color: rgba(255, 255, 255, .8); }
+/* 라이브 피드 삭제 후 재배치: 왼쪽 = 직원 명단 + 공고(남은 높이), 가운데 = 결재 + 결재 대기(남은 높이) + 파일 공유 */
+.live-bottom .roster-body { max-height: 430px; }
+.live-col > #notion-jobs { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 240px; }
+.live-col > #notion-jobs .nt-body { flex: 1 1 auto; contain: size; overflow-y: auto; min-height: 190px; }
+.live-col > #notion-jobs .nt-list { max-height: none; }
