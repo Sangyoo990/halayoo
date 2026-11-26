@@ -354,7 +354,8 @@ export async function runOrderNow(orderText: string, team: string, orderUrl?: st
     `담당팀: ${team}`,
     orderUrl ? `지시함 항목: ${orderUrl}` : "지시함 항목: 지시함에서 이 지시 원문과 같은 '접수' 항목을 찾아 처리해.",
     `지시 원문:\n${orderText}`,
-    "끝나면 지시함 항목을 완료/처리 중/보류로 수정하고, 마지막 응답(푸시)은 '⚡ 즉시 지시 처리 — <결론 1줄>' 형식으로 2줄 이내.",
+    "처리 방법: 그 팀 팀장이 직접 조사해 보고하는 것처럼 해. 웹 검색으로 관련 자료를 찾고, 원문 페이지를 열어(curl/WebFetch) 끝까지 읽고, 필요하면 Drive·Notion 자료도 확인해. 결과는 맞는 Notion DB(없으면 지시함 항목 페이지 본문)에 '결론 먼저 → 핵심 내용 → 근거·출처 링크 목록 → 대표가 결정할 것/다음 할 일' 순서의 보고서로 저장해. 실제로 열어 본 자료만 쓰고, 확인 못 한 건 [확인 필요]. 사이트가 자동 접속을 막으면 우회하지 말고 다른 출처를 써.",
+    "끝나면 지시함 항목을 완료/처리 중/보류로 수정해: 처리 결과 = 결론 2~3문장, 결과 링크 = 보고서 페이지. 마지막 응답(푸시)은 '⚡ <팀명> 보고 — <결론 1줄>' 형식으로 2줄 이내.",
   ].join("\n");
   try {
     await mcp.callTool(REMOTE, "fire_trigger", { trigger_id: ORDER_TRIGGER_ID, text }, { cache: false });
@@ -488,5 +489,31 @@ export async function deleteEvents(urls: string[]): Promise<{ ok: boolean; detai
     return { ok: true };
   } catch (err) {
     return { ok: false, detail: mcpDetail(err, "일정 삭제") };
+  }
+}
+
+
+// ── 지시 진행 상황 확인 (팀장 보고 받기) ─────────────────────
+
+export type OrderStatus = { status: string; result: string; link: string };
+
+function pageId(url: string) {
+  return url.match(/[0-9a-f]{32}/i)?.[0]?.toLowerCase() ?? url.replace(/-/g, "").match(/[0-9a-f]{32}/i)?.[0]?.toLowerCase() ?? "";
+}
+
+/** 📮 지시함에서 그 지시 항목의 상태·처리 결과·결과 링크를 읽는다 (읽기 전용, view 방식) */
+export async function checkOrder(orderUrl: string): Promise<OrderStatus | null> {
+  const mcp = await getMcp();
+  if (!mcp) return null;
+  const { NOTION } = await import("../../notion.config");
+  const id = pageId(orderUrl);
+  if (!id) return null;
+  try {
+    const list = await rows(mcp, NOTION.databases.orders.view);
+    const row = list.find((r) => pageId(str(r.url)) === id);
+    if (!row) return null;
+    return { status: str(row["상태"]), result: str(row["처리 결과"]), link: str(row["결과 링크"]) };
+  } catch {
+    return null;
   }
 }

@@ -8,6 +8,7 @@ import {
   publish,
   submitOrder,
   runOrderNow,
+  checkOrder,
   type IntegrationStatus,
   type PublishResult,
 } from "./game/report";
@@ -614,6 +615,34 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
   const lead = target === "auto" ? null : DEPT_LEAD[target];
   const teamName = target === "auto" ? "" : (DEPT_ROOMS.find((r) => r.id === target)?.name ?? "");
 
+  /** 바로 처리한 지시는 1분마다 지시함을 확인해, 끝나면 팀장이 지시창에 보고한다 (최대 45분) */
+  const followUp = (orderUrl: string, team: string, who: string) => {
+    let tries = 0;
+    let lastStatus = "접수";
+    const timer = window.setInterval(async () => {
+      tries += 1;
+      const st = await checkOrder(orderUrl);
+      if (st && st.status && st.status !== lastStatus) {
+        lastStatus = st.status;
+        const link = /^https:\/\//.test(st.link) ? `\n📄 ${st.link}` : "";
+        if (st.status === "완료" || st.status === "보류") {
+          engine.pushChat(
+            "staff",
+            `${who} · ${team}`,
+            `${st.status === "완료" ? "✅ 대표님, 조사 끝내고 보고 올립니다." : "⏸️ 대표님, 이 건은 보류했어요."}\n${st.result || "(처리 결과는 지시함에서 확인해 주세요)"}${link}`,
+          );
+          window.clearInterval(timer);
+          return;
+        }
+        if (st.status === "처리 중") engine.pushChat("staff", `${who} · ${team}`, `🔎 조사 중이에요. ${st.result}`.trim());
+      }
+      if (tries >= 45) {
+        window.clearInterval(timer);
+        engine.pushChat("staff", `${who} · ${team}`, "⏳ 아직 정리 중이에요. 끝나면 지시함과 아이폰 푸시로 보고할게요.");
+      }
+    }, 60_000);
+  };
+
   const register = (value: string, team: string, who: string) => {
     const immediate = now;
     void submitOrder(value, team).then(async (r) => {
@@ -634,9 +663,10 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
         "staff",
         `${who} · 지시함`,
         run.ok
-          ? `⚡ ${team}에 지시 등록하고 바로 처리 시작했어요. 보통 10~30분 뒤 결과가 지시함에 적히고 푸시가 가요.${r.url ? `\n${r.url}` : ""}`
+          ? `⚡ 바로 조사 시작합니다. 웹 검색·원문 확인해서 보고서로 정리할게요 (보통 10~30분). 끝나면 여기와 아이폰 푸시로 보고드려요.${r.url ? `\n${r.url}` : ""}`
           : `📮 ${team}에 지시는 등록했어요. ⚠️ ${run.detail}${r.url ? `\n${r.url}` : ""}`,
       );
+      if (run.ok && r.url) followUp(r.url, team, who);
     });
   };
 
@@ -684,7 +714,10 @@ function CeoConsole({ engine, snap }: { engine: Company; snap: Snapshot }) {
               <button
                 key={room.id}
                 className={target === room.id ? "on" : ""}
-                onClick={() => setTarget(room.id)}
+                onClick={() => {
+                  setTarget(room.id);
+                  setNow(true);
+                }}
                 role="radio"
                 aria-checked={target === room.id}
                 title={`${room.name} ${l.name} 팀장에게 바로 지시`}
